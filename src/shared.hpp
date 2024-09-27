@@ -12,18 +12,8 @@
 #include "declarations.hpp"
 #include "functions.hpp"
 
-#include "gsc_entity.hpp"
 #include "gsc_player.hpp"
-#include "gsc_bots.hpp"
-#include "gsc_weapons.hpp"
 #include "gsc_utils.hpp"
-#include "gsc_exec.hpp"
-#if COMPILE_SQLITE == 1
-#include "gsc_sqlite.hpp"
-#endif
-#if COMPILE_CURL == 1
-#include "gsc_curl.hpp"
-#endif
 
 #define STACK_UNDEFINED 0
 #define STACK_STRING 1
@@ -40,19 +30,6 @@
 #define stackPushFloat Scr_AddFloat
 #define stackPushString Scr_AddString
 #define stackPushVector Scr_AddVector
-#define stackPushEntity Scr_AddEntity
-#define stackPushArray Scr_MakeArray
-#define stackPushArrayLast Scr_AddArray
-#define stackPushObject Scr_AddObject
-#define stackPushFunc Scr_AddFunc
-
-extern uintptr_t resume_addr_Jump_Check;
-extern uintptr_t resume_addr_Jump_Check_2;
-
-extern customPlayerState_t customPlayerState[MAX_CLIENTS];
-
-__attribute__ ((naked)) void hook_Jump_Check_Naked();
-__attribute__ ((naked)) void hook_Jump_Check_Naked_2();
 
 xfunction_t Scr_GetCustomFunction(const char **fname, qboolean *fdev);
 xmethod_t Scr_GetCustomMethod(const char **fname, qboolean *fdev);
@@ -63,13 +40,8 @@ int stackGetParams(const char *params, ...);
 void stackError(const char *format, ...);
 
 int stackGetParamInt(int param, int *value);
-int stackGetParamFunction(int param, int *value);
 int stackGetParamString(int param, char **value);
-int stackGetParamConstString(int param, unsigned int *value);
-int stackGetParamLocalizedString(int param, char **value);
-int stackGetParamVector(int param, vec3_t value);
 int stackGetParamFloat(int param, float *value);
-int stackGetParamObject(int param, unsigned int *value);
 
 
 // For tests

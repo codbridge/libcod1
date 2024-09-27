@@ -1,15 +1,8 @@
-# Linux server extension for [CoD1](https://en.wikipedia.org/wiki/Call_of_Duty_(video_game))
-### Adding security, fixes, and features
-Supported game version: **1.1**
-___
-### Installation and usage
-See the [Wiki](https://github.com/cod1dev/libcod1/wiki)
-___
-#### References
-- [Killtube](https://www.killtube.org/)
-- [Reverse Engineering Discord](https://discord.gg/rtfm)
-- [CoDExtended](https://github.com/xtnded/codextended)
-- [CoD2rev_Server](https://github.com/voron00/CoD2rev_Server) and [voron's libcod fork](https://github.com/voron00/libcod)
-- [Quake-III-Arena](https://github.com/id-Software/Quake-III-Arena)
-- [Ghidra](https://en.wikipedia.org/wiki/Ghidra) and [IDA Free](https://hex-rays.com/ida-free/)
-- [ChatGPT](https://chat.openai.com/)
+Linux server extension for CoD1 1.5
+
+This is a minimal version of the 1.1 branch, the wiki do not fully apply
+
+The cod1dev server extension is currently focused on the 1.1 game version
+
+1 item of the todo-list is to make the 1.5 server able to let the 1.1 client play on it
+see: https://discord.com/channels/1220643040880885851/1247731807018025031

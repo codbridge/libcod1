@@ -10,60 +10,6 @@ scr_function_t scriptFunctions[] =
     {"fclose", gsc_utils_fclose, 0},
 #endif
 
-    {"execute", gsc_exec, 0},
-#if 0
-    {"execute_async_create", gsc_exec_async_create, 0},
-    {"execute_async_create_nosave", gsc_exec_async_create_nosave, 0},
-    {"execute_async_checkdone", gsc_exec_async_checkdone, 0},
-#endif
-
-    {"sendCommandToClient", gsc_utils_sendcommandtoclient, 0},
-    {"logPrintConsole", gsc_utils_logprintconsole, 0},
-    {"getSubStr", gsc_utils_getsubstr, 0, },
-    {"getAscii", gsc_utils_getascii, 0},
-    {"toUpper", gsc_utils_toupper, 0},
-    {"toLower", gsc_utils_tolower, 0},
-    {"strtok", gsc_utils_strtok, 0},
-    {"replace", gsc_utils_replace, 0},
-    {"getServerStartTime", gsc_utils_getserverstarttime, 0},
-    {"getSystemTime", gsc_utils_getsystemtime, 0},
-    {"strftime", gsc_utils_strftime, 0},
-    {"getConfigString", gsc_utils_getconfigstring, 0},
-    {"makeLocalizedString", gsc_utils_makelocalizedstring, 0},
-    {"ban", gsc_utils_ban, 0},
-    {"unban", gsc_utils_unban, 0},
-    {"strip", gsc_utils_strip, 0},
-    {"strstr", gsc_utils_strstr, 0},
-    {"monotone", gsc_utils_monotone, 0},
-
-    // Weapons
-    {"setWeaponCookable", gsc_weapons_setweaponcookable, 0},
-    {"setWeaponFuseTime", gsc_weapons_setweaponfusetime, 0},
-    //
-
-#if COMPILE_SQLITE == 1
-    {"sqlite_open", gsc_sqlite_open, 0},
-    {"sqlite_query", gsc_sqlite_query, 0},
-    {"sqlite_close", gsc_sqlite_close, 0},
-    {"sqlite_escape_string", gsc_sqlite_escape_string, 0},
-    {"sqlite_databases_count", gsc_sqlite_databases_count, 0},
-    {"sqlite_tasks_count", gsc_sqlite_tasks_count, 0},
-#if 0
-    {"async_sqlite_initialize", gsc_async_sqlite_initialize, 0},
-    {"async_sqlite_create_query", gsc_async_sqlite_create_query, 0},
-    {"async_sqlite_create_query_nosave", gsc_async_sqlite_create_query_nosave, 0},
-    {"async_sqlite_checkdone", gsc_async_sqlite_checkdone, 0},
-#endif
-#endif
-
-#if COMPILE_CURL == 1
-    {"webhookMessage", gsc_curl_webhookmessage, 0}, // From Kazam pull request #8
-#endif
-
-#if COMPILE_SSL == 1
-    {"hash", gsc_utils_hash, 0},
-#endif
-
     {"testFunction", gsc_testfunction, 0},
     {NULL, NULL, 0} // Terminator
 };
@@ -89,12 +35,6 @@ xfunction_t Scr_GetCustomFunction(const char **fname, int *fdev)
 
 scr_method_t scriptMethods[] =
 {
-    //// Entity
-    {"setBounds", gsc_entity_setbounds, 0},
-    {"showToPlayer", gsc_entity_showtoplayer, 0},
-    ////
-
-    //// Player
     {"aimButtonPressed", gsc_player_button_ads, 0},
     {"leftButtonPressed", gsc_player_button_left, 0},
     {"rightButtonPressed", gsc_player_button_right, 0},
@@ -105,51 +45,8 @@ scr_method_t scriptMethods[] =
     {"leanRightButtonPressed", gsc_player_button_leanright, 0},
     {"reloadButtonPressed", gsc_player_button_reload, 0},
 
-    {"getIP", gsc_player_getip, 0},
-    {"getPing", gsc_player_getping, 0},
-    {"getFPS", gsc_player_getfps, 0},
-    {"getUserinfo", gsc_player_getuserinfo, 0},
-    {"setUserinfo", gsc_player_setuserinfo, 0},
-    {"processClientCommand", gsc_player_processclientcommand, 0},
-    {"connectionlessPacketToClient", gsc_player_connectionlesspackettoclient, 0},
-    {"dropClient", gsc_player_dropclient, 0},
-    {"setHiddenFromScoreboard", gsc_player_sethiddenfromscoreboard, 0},
-    {"isHiddenFromScoreboard", gsc_player_ishiddenfromscoreboard, 0},
-
-    {"getVelocity", gsc_player_getvelocity, 0},
-    {"setVelocity", gsc_player_setvelocity, 0},
     {"getPlayerAngles", gsc_player_gettagangles, 0},
     {"getStance", gsc_player_getstance, 0},
-    {"isOnLadder", gsc_player_isonladder, 0},
-    {"setSpeed", gsc_player_setspeed, 0},
-    {"setJumpHeight", gsc_player_setjumpheight, 0},
-    {"getAirJumps", gsc_player_getairjumps, 0},
-    {"setAirJumps", gsc_player_setairjumps, 0},
-    {"noClip", gsc_player_noclip, 0},
-    {"ufo", gsc_player_ufo, 0},
-    {"disableItemAutoPickup", gsc_player_disableitemautopickup, 0},
-    {"enableItemAutoPickup", gsc_player_enableitemautopickup, 0},
-    {"getSprintRemaining", gsc_player_getsprintremaining, 0},
-    {"playScriptAnimation", gsc_player_playscriptanimation, 0},
-    {"isBot", gsc_player_isbot, 0},
-    ////
-
-    //// Bot
-    {"setWalkValues", gsc_bots_setwalkvalues, 0},
-    {"setWalkDir", gsc_bots_setwalkdir, 0},
-    {"setBotStance", gsc_bots_setbotstance, 0},
-    {"setLean", gsc_bots_setlean, 0},
-    {"setAim", gsc_bots_setaim, 0},
-    {"fireWeapon", gsc_bots_fireweapon, 0},
-    {"meleeWeapon", gsc_bots_meleeweapon, 0},
-    {"reloadWeapon", gsc_bots_reloadweapon, 0},
-    {"switchToWeaponId", gsc_bots_switchtoweaponid, 0},
-    ////
-
-#if COMPILE_SQLITE == 1
-    {"async_sqlite_create_entity_query", gsc_async_sqlite_create_entity_query, 0},
-    {"async_sqlite_create_entity_query_nosave", gsc_async_sqlite_create_entity_query_nosave, 0},
-#endif
 
     {"testMethod", gsc_testmethod, 0},
     {NULL, NULL, 0} // Terminator
@@ -217,17 +114,6 @@ int stackGetParams(const char *params, ...)
             break;
         }
 
-        case 'v':
-        {
-            float *tmp = va_arg(args, float *);
-            if (!stackGetParamVector(i, tmp))
-            {
-                Com_DPrintf("\nstackGetParams() Param %i is not a vector\n", i);
-                errors++;
-            }
-            break;
-        }
-
         case 'f':
         {
             float *tmp = va_arg(args, float *);
@@ -245,28 +131,6 @@ int stackGetParams(const char *params, ...)
             if (!stackGetParamString(i, tmp))
             {
                 Com_DPrintf("\nstackGetParams() Param %i is not a string\n", i);
-                errors++;
-            }
-            break;
-        }
-
-        case 'c':
-        {
-            unsigned int *tmp = va_arg(args, unsigned int *);
-            if (!stackGetParamConstString(i, tmp))
-            {
-                Com_DPrintf("\nstackGetParams() Param %i is not a const string\n", i);
-                errors++;
-            }
-            break;
-        }
-
-        case 'l':
-        {
-            char **tmp = va_arg(args, char **);
-            if (!stackGetParamLocalizedString(i, tmp))
-            {
-                Com_DPrintf("\nstackGetParams() Param %i is not a localized string\n", i);
                 errors++;
             }
             break;
@@ -305,25 +169,6 @@ int stackGetParamInt(int param, int *value)
     return 1;
 }
 
-int stackGetParamFunction(int param, int *value)
-{
-    printf("####### stackGetParamFunction\n");
-    
-
-    if (param >= Scr_GetNumParam())
-        return 0;
-
-    VariableValue *var;
-    var = &scrVmPub.top[-param];
-
-    if (var->type != STACK_FUNCTION)
-        return 0;
-
-    *value = var->u.codePosValue - scrVarPub.programBuffer;
-
-    return 1;
-}
-
 int stackGetParamString(int param, char **value)
 {
     if (param >= Scr_GetNumParam())
@@ -336,54 +181,6 @@ int stackGetParamString(int param, char **value)
         return 0;
 
     *value = SL_ConvertToString(var->u.stringValue);
-
-    return 1;
-}
-
-int stackGetParamConstString(int param, unsigned int *value)
-{
-    if (param >= Scr_GetNumParam())
-        return 0;
-
-    VariableValue *var;
-    var = &scrVmPub.top[-param];
-
-    if (var->type != STACK_STRING)
-        return 0;
-
-    *value = var->u.stringValue;
-
-    return 1;
-}
-
-int stackGetParamLocalizedString(int param, char **value)
-{
-    if (param >= Scr_GetNumParam())
-        return 0;
-
-    VariableValue *var;
-    var = &scrVmPub.top[-param];
-
-    if (var->type != STACK_LOCALIZED_STRING)
-        return 0;
-
-    *value = SL_ConvertToString(var->u.stringValue);
-
-    return 1;
-}
-
-int stackGetParamVector(int param, vec3_t value)
-{
-    if (param >= Scr_GetNumParam())
-        return 0;
-
-    VariableValue *var;
-    var = &scrVmPub.top[-param];
-
-    if (var->type != STACK_VECTOR)
-        return 0;
-
-    VectorCopy(var->u.vectorValue, value);
 
     return 1;
 }
@@ -410,22 +207,6 @@ int stackGetParamFloat(int param, float *value)
     return 1;
 }
 
-int stackGetParamObject(int param, unsigned int *value)
-{
-    if (param >= Scr_GetNumParam())
-        return 0;
-
-    VariableValue *var;
-    var = &scrVmPub.top[-param];
-
-    if (var->type != STACK_OBJECT)
-        return 0;
-
-    *value = var->u.pointerValue;
-
-    return 1;
-}
-
 
 // For tests
 void gsc_testfunction()
@@ -443,18 +224,12 @@ void gsc_testmethod(scr_entref_t ref)
         return;
     }
     
-    //client_t* client = &svs.clients[id];
+    client_t* client = &svs.clients[id];
     //playerState_t *ps = SV_GameClientNum(id);
-    //gentity_t *gentity = &g_entities[id];
 
-
-    /*printf("###### viewangles[0] = %f\n", ps->viewangles[0]);
-    printf("###### viewangles[1] = %f\n", ps->viewangles[1]);
-    printf("###### viewangles[2] = %f\n", ps->viewangles[2]);
-
-    printf("###### origin[0] = %f\n", ps->origin[0]);
-    printf("###### origin[1] = %f\n", ps->origin[1]);
-    printf("###### origin[2] = %f\n", ps->origin[2]);*/
+    printf("###### client->name = %s\n", client->name);   
+    printf("###### client->ping = %i\n", client->ping);
+    printf("###### client->rate = %i\n", client->rate);
     
 
 
