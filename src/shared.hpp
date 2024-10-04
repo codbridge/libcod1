@@ -13,7 +13,7 @@
 #include "functions.hpp"
 
 #include "gsc_player.hpp"
-#include "gsc_utils.hpp"
+#include "gsc_bots.hpp"
 
 #define STACK_UNDEFINED 0
 #define STACK_STRING 1
@@ -30,6 +30,10 @@
 #define stackPushFloat Scr_AddFloat
 #define stackPushString Scr_AddString
 #define stackPushVector Scr_AddVector
+#define stackPushArray Scr_MakeArray
+#define stackPushArrayLast Scr_AddArray
+
+extern customPlayerState_t customPlayerState[MAX_CLIENTS];
 
 xfunction_t Scr_GetCustomFunction(const char **fname, qboolean *fdev);
 xmethod_t Scr_GetCustomMethod(const char **fname, qboolean *fdev);

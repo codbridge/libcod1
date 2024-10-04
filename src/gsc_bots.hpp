@@ -1,0 +1,1 @@
+void gsc_bots_setuse(scr_entref_t id);

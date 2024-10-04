@@ -2,13 +2,7 @@
 
 scr_function_t scriptFunctions[] =
 {
-#if ENABLE_UNSAFE == 1
-    {"file_exists", gsc_utils_file_exists, 0},
-    {"fopen", gsc_utils_fopen, 0},
-    {"fwrite", gsc_utils_fwrite, 0},
-    {"fread", gsc_utils_fread, 0},
-    {"fclose", gsc_utils_fclose, 0},
-#endif
+
 
     {"testFunction", gsc_testfunction, 0},
     {NULL, NULL, 0} // Terminator
@@ -47,6 +41,12 @@ scr_method_t scriptMethods[] =
 
     {"getPlayerAngles", gsc_player_getangles, 0},
     {"getStance", gsc_player_getstance, 0},
+
+    {"processClientCommand", gsc_player_processclientcommand, 0},
+
+    //// Bot
+    {"setUse", gsc_bots_setuse, 0},
+    ////
 
     {"testMethod", gsc_testmethod, 0},
     {NULL, NULL, 0} // Terminator

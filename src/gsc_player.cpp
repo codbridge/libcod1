@@ -179,3 +179,19 @@ void gsc_player_getstance(scr_entref_t ref)
     else
         stackPushString("stand");
 }
+
+void gsc_player_processclientcommand(scr_entref_t ref)
+{
+    int id = ref.entnum;
+
+    if (id >= MAX_CLIENTS)
+    {
+        stackError("gsc_player_processclientcommand() entity %i is not a player", id);
+        stackPushUndefined();
+        return;
+    }
+
+    ClientCommand(id);
+
+    stackPushBool(qtrue);
+}

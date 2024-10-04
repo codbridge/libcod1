@@ -15,9 +15,6 @@ while [[ $# -gt 0 ]]; do
         -d | --debug)
             debug="-g -ggdb -O0" # debug build without optimization
             ;;
-        -u | --unsafe)
-            unsafe=true
-            ;;
         *)
             unrecognized_arg=$arg
             break
@@ -41,16 +38,6 @@ if [ -v debug ]; then
 else
     echo "OFF"
     debug=""
-fi
-
-echo -n "$list_item"
-echo -n "Unsafe: "
-if [ -v unsafe ]; then
-    echo "ON"
-    constants+=" -D ENABLE_UNSAFE=1"
-else
-    echo "OFF"
-    constants+=" -D ENABLE_UNSAFE=0"
 fi
 
 echo $separator
@@ -80,9 +67,9 @@ echo $wait_indicator
 $cc $debug $options $constants -c gsc_player.cpp -o objects/gsc_player.opp
 
 echo -n "$list_item"
-echo -n "gsc_utils.cpp"
+echo -n "gsc_bots.cpp"
 echo $wait_indicator
-$cc $debug $options $constants -c gsc_utils.cpp -o objects/gsc_utils.opp
+$cc $debug $options $constants -c gsc_bots.cpp -o objects/gsc_bots.opp
 
 echo -n "Linking libcod1.so"
 echo $wait_indicator

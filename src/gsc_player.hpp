@@ -9,3 +9,4 @@ void gsc_player_button_leanright(scr_entref_t ref);
 void gsc_player_button_reload(scr_entref_t ref);
 void gsc_player_getangles(scr_entref_t ref);
 void gsc_player_getstance(scr_entref_t ref);
+void gsc_player_processclientcommand(scr_entref_t ref);

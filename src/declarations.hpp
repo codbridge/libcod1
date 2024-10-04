@@ -2,6 +2,8 @@
 #define qtrue   1
 #define qfalse  0
 
+#define VectorCopy(a, b) ((b)[0] = (a)[0],(b)[1] = (a)[1],(b)[2] = (a)[2])
+
 #define PACKET_BACKUP 32
 #define PACKET_MASK (PACKET_BACKUP - 1)
 
@@ -44,6 +46,7 @@
 typedef void (*xcommand_t)(void);
 
 typedef unsigned char byte;
+typedef struct gclient_s gclient_t;
 typedef struct gentity_s gentity_t;
 
 typedef struct scr_entref_s
@@ -63,8 +66,23 @@ typedef enum
 
 typedef enum
 {
+    STATE_PLAYING,
+    STATE_DEAD,
+    STATE_SPECTATOR,
+    STATE_INTERMISSION
+} sessionState_t;
+
+typedef enum
+{
+    CON_DISCONNECTED,
+    CON_CONNECTING,
+    CON_CONNECTED
+} clientConnected_t;
+
+typedef enum
+{
     NA_BOT = 0,
-    NA_BAD = 0,
+    NA_BAD = 1,
     NA_LOOPBACK = 2,
     NA_BROADCAST = 3,
     NA_IP = 4,
@@ -260,9 +278,32 @@ typedef struct playerState_s
     byte gap[8184];
 } playerState_t;
 
+typedef struct
+{
+    sessionState_t sessionState;
+    int forceSpectatorClient;
+    int statusIcon;
+    int archiveTime;
+    int score;
+    int deaths;
+    byte gap[4];
+    clientConnected_t connected;
+    usercmd_t cmd;
+    //...
+} clientSession_t;
+
+struct gclient_s
+{
+    playerState_t ps;
+    clientSession_t sess;
+    //...
+};
+
 struct gentity_s
 {
-    //...
+    byte gap[348];
+    struct gclient_s *client;
+    byte gap2[444];
 };
 
 typedef struct
@@ -341,6 +382,8 @@ typedef struct
     //...
 } serverStatic_t;
 
+extern gentity_t *g_entities;
+
 static const int svs_offset = 0x083ccd80;
 static const int vmpub_offset = 0x0830acc0;
 
@@ -354,4 +397,22 @@ static_assert((sizeof(client_t) == 371124), "ERROR: client_t size is invalid");
 static_assert((sizeof(playerState_t) == 8396), "ERROR: playerState_t size is invalid");
 static_assert((sizeof(usercmd_t) == 24), "ERROR: usercmd_t size is invalid");
 static_assert((sizeof(netadr_t) == 20), "ERROR: netadr_t size is invalid");
+static_assert((sizeof(gentity_t) == 796), "ERROR: gentity_t size is invalid!");
 #endif
+
+
+//// Custom
+typedef struct callback_s
+{
+    int *pos;
+    const char *name;
+    bool custom;
+} callback_t;
+
+typedef struct customPlayerState_s
+{
+    //// Bot
+    int botButtons;
+    ////
+} customPlayerState_t;
+////
