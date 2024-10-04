@@ -45,7 +45,7 @@ scr_method_t scriptMethods[] =
     {"leanRightButtonPressed", gsc_player_button_leanright, 0},
     {"reloadButtonPressed", gsc_player_button_reload, 0},
 
-    {"getPlayerAngles", gsc_player_gettagangles, 0},
+    {"getPlayerAngles", gsc_player_getangles, 0},
     {"getStance", gsc_player_getstance, 0},
 
     {"testMethod", gsc_testmethod, 0},

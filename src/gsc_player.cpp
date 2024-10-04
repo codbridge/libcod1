@@ -144,13 +144,13 @@ void gsc_player_button_reload(scr_entref_t ref)
     stackPushBool(client->lastUsercmd.wbuttons & KEY_MASK_RELOAD ? qtrue : qfalse);
 }
 
-void gsc_player_gettagangles(scr_entref_t ref)
+void gsc_player_getangles(scr_entref_t ref)
 {
     int id = ref.entnum;
 
     if (id >= MAX_CLIENTS)
     {
-        stackError("gsc_player_gettagangles() entity %i is not a player", id);
+        stackError("gsc_player_getangles() entity %i is not a player", id);
         stackPushUndefined();
         return;
     }
