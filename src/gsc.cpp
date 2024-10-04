@@ -43,6 +43,7 @@ scr_method_t scriptMethods[] =
     {"getStance", gsc_player_getstance, 0},
 
     {"processClientCommand", gsc_player_processclientcommand, 0},
+    {"renameClient", gsc_player_renameclient, 0},
 
     //// Bot
     {"setUse", gsc_bots_setuse, 0},

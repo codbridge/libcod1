@@ -195,3 +195,36 @@ void gsc_player_processclientcommand(scr_entref_t ref)
 
     stackPushBool(qtrue);
 }
+
+void gsc_player_renameclient(scr_entref_t ref)
+{
+    int id = ref.entnum;
+    char *name;
+
+    if ( !stackGetParams("s", &name) )
+    {
+        stackError("gsc_player_renameclient() argument is undefined or has a wrong type");
+        stackPushUndefined();
+        return;
+    }
+
+    if ( strlen(name) > 31 )
+    {
+        stackError("gsc_player_renameclient() player name is longer than 31 characters");
+        stackPushUndefined();
+        return;
+    }
+
+    if ( id >= MAX_CLIENTS )
+    {
+        stackError("gsc_player_renameclient() entity %i is not a player", id);
+        stackPushUndefined();
+        return;
+    }
+
+    client_t *client = &svs.clients[id];
+    Info_SetValueForKey(client->userinfo, "name", name);
+    strcpy(client->name, name);
+
+    stackPushBool(qtrue);
+}

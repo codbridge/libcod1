@@ -9,6 +9,9 @@ extern ClientCommand_t ClientCommand;
 
 typedef void (*trap_Argv_t)(int arg, char *buffer, int bufferLength);
 
+typedef void (*Info_SetValueForKey_t)(char *s, const char *key, const char *value);
+static const Info_SetValueForKey_t Info_SetValueForKey = (Info_SetValueForKey_t)0x08086855;
+
 //// Cmd
 typedef char* (*Cmd_Argv_t)(int arg);
 static const Cmd_Argv_t Cmd_Argv = (Cmd_Argv_t)0x080600f4;
