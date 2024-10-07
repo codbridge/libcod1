@@ -1,3 +1,6 @@
+typedef int (*VM_Call_t)(vm_t *vm, int callnum, ...);
+static const VM_Call_t VM_Call = (VM_Call_t)0x0809afbc;
+
 typedef char* (*va_t)(const char *format, ...);
 extern va_t va;
 
@@ -9,8 +12,17 @@ extern ClientCommand_t ClientCommand;
 
 typedef void (*trap_Argv_t)(int arg, char *buffer, int bufferLength);
 
-typedef void (*Info_SetValueForKey_t)(char *s, const char *key, const char *value);
-static const Info_SetValueForKey_t Info_SetValueForKey = (Info_SetValueForKey_t)0x08086855;
+typedef void (*I_strncpyz_t)(char *dest, const char *src, int destsize);
+static const I_strncpyz_t I_strncpyz = (I_strncpyz_t)0x08085e32;
+
+typedef qboolean (*Sys_IsLANAddress_t)(netadr_t adr);
+static const Sys_IsLANAddress_t Sys_IsLANAddress = (Sys_IsLANAddress_t)0x080d4ebc;
+
+typedef const char * (*PbAuthClient_t)(const char *clientAddress, int cl_punkbuster, const char *PBguid);
+static const PbAuthClient_t PbAuthClient = (PbAuthClient_t)0x080c191c;
+
+typedef void (*Netchan_Setup_t)(netsrc_t src, netchan_t *chan, netadr_t adr, unsigned int qport);
+static const Netchan_Setup_t Netchan_Setup = (Netchan_Setup_t)0x0808346f;
 
 //// Cmd
 typedef char* (*Cmd_Argv_t)(int arg);
@@ -26,6 +38,9 @@ static const Com_DPrintf_t Com_DPrintf = (Com_DPrintf_t)0x0806fc5f;
 
 typedef void (*Com_PrintMessage_t)(int channel, const char *message);
 static const Com_PrintMessage_t Com_PrintMessage = (Com_PrintMessage_t)0x0806f827;
+
+typedef void (*Com_Printf_t)(const char *format, ...);
+static const Com_Printf_t Com_Printf = (Com_Printf_t)0x0806fc10;
 ////
 
 //// Cvar
@@ -34,6 +49,31 @@ static const Cvar_Get_t Cvar_Get = (Cvar_Get_t)0x08072a7c;
 
 typedef cvar_t* (*Cvar_FindVar_t)(const char *var_name);
 static const Cvar_FindVar_t Cvar_FindVar = (Cvar_FindVar_t)0x08072916;
+////
+
+//// Info
+typedef void (*Info_SetValueForKey_t)(char *s, const char *key, const char *value);
+static const Info_SetValueForKey_t Info_SetValueForKey = (Info_SetValueForKey_t)0x08086855;
+
+typedef char * (*Info_ValueForKey_t)(const char *s, const char *key);
+static const Info_ValueForKey_t Info_ValueForKey = (Info_ValueForKey_t)0x08086397;
+////
+
+//// NET
+typedef const char * (*NET_AdrToString_t)(netadr_t a);
+static const NET_AdrToString_t NET_AdrToString = (NET_AdrToString_t)0x08083e10;
+
+typedef int (*NET_CompareBaseAdr_t)(netadr_t a,netadr_t b);
+static const NET_CompareBaseAdr_t NET_CompareBaseAdr = (NET_CompareBaseAdr_t)0x08083de3;
+
+typedef qboolean (*NET_IsLocalAddress_t)(netadr_t from);
+static const NET_IsLocalAddress_t NET_IsLocalAddress = (NET_IsLocalAddress_t)0x0808403c;
+
+typedef void (*NET_OutOfBandPrint_t)(netsrc_t net_socket, netadr_t adr, const char *format, ...);
+static const NET_OutOfBandPrint_t NET_OutOfBandPrint = (NET_OutOfBandPrint_t)0x0808428e;
+
+typedef qboolean (*NET_CompareAdr_t)(netadr_t a, netadr_t b);
+static const NET_CompareAdr_t NET_CompareAdr = (NET_CompareAdr_t)0x0808400f;
 ////
 
 //// Scr
@@ -90,6 +130,9 @@ extern Scr_ExecEntThread_t Scr_ExecEntThread;
 
 typedef short (*Scr_FreeThread_t)(short thread_id);
 extern Scr_FreeThread_t Scr_FreeThread;
+
+typedef unsigned short (*Scr_AllocArray_t)(void);
+static const Scr_AllocArray_t Scr_AllocArray = (Scr_AllocArray_t)0x080a5ab4;
 ////
 
 //// SV
@@ -98,4 +141,19 @@ static const SV_GameClientNum_t SV_GameClientNum = (SV_GameClientNum_t)0x0808d33
 
 typedef gentity_t* (*SV_ClientThink_t)(client_t *cl, usercmd_t *cmd);
 static const SV_ClientThink_t SV_ClientThink = (SV_ClientThink_t)0x0808ca58;
+
+typedef void (*SV_FreeClient_t)(client_t *client);
+static const SV_FreeClient_t SV_FreeClient = (SV_FreeClient_t)0x08089daf;
+
+typedef gentity_t * (*SV_GentityNum_t)(int num);
+static const SV_GentityNum_t SV_GentityNum = (SV_GentityNum_t)0x0808d314;
+
+typedef void (*SV_UserinfoChanged_t)(client_t *client);
+static const SV_UserinfoChanged_t SV_UserinfoChanged = (SV_UserinfoChanged_t)0x0808c4fd;
+
+typedef void (*SV_Heartbeat_f_t)(void);
+static const SV_Heartbeat_f_t SV_Heartbeat_f = (SV_Heartbeat_f_t)0x08088535;
+
+typedef void (*SV_FreeClientScriptId_t)(client_t *client);
+static const SV_FreeClientScriptId_t SV_FreeClientScriptId = (SV_FreeClientScriptId_t)0x08093e86;
 ////

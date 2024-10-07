@@ -7,6 +7,7 @@
 #define PACKET_BACKUP 32
 #define PACKET_MASK (PACKET_BACKUP - 1)
 
+#define MAX_CHALLENGES              1024
 #define MAX_CLIENTS                 64
 #define MAX_DOWNLOAD_WINDOW         8
 #define MAX_INFO_STRING             0x400
@@ -48,6 +49,8 @@ typedef void (*xcommand_t)(void);
 typedef unsigned char byte;
 typedef struct gclient_s gclient_t;
 typedef struct gentity_s gentity_t;
+
+struct vm_t;
 
 typedef struct scr_entref_s
 {
@@ -374,11 +377,26 @@ typedef struct client_s
 
 typedef struct
 {
+    netadr_t adr;
+    int challenge;
+    int time;
+    int pingTime;
+    int firstTime;
+    int firstPing;
+    qboolean connected;
+    int guid;
+    char PBguid[33];
+} challenge_t;
+
+typedef struct
+{
     qboolean initialized;
     int time;
     int snapFlagServerBit;
     byte gap[2];
     client_t *clients;
+    byte gap2[76];
+    challenge_t challenges[MAX_CHALLENGES];
     //...
 } serverStatic_t;
 
@@ -386,9 +404,11 @@ extern gentity_t *g_entities;
 
 static const int svs_offset = 0x083ccd80;
 static const int vmpub_offset = 0x0830acc0;
+static const int gvm_offset = 0x080ee804;
 
 #define scrVmPub (*((scrVmPub_t*)(vmpub_offset)))
 #define svs (*((serverStatic_t*)(svs_offset)))
+#define gvm (*(vm_t**)(gvm_offset))
 
 // Require structure sizes to match
 #if __GNUC__ >= 6
@@ -414,5 +434,6 @@ typedef struct customPlayerState_s
     //// Bot
     int botButtons;
     ////
+    int protocolVersion;
 } customPlayerState_t;
 ////

@@ -5,6 +5,12 @@
 
 // Stock cvars
 cvar_t *fs_game;
+cvar_t *sv_maxclients;
+cvar_t *sv_maxPing;
+cvar_t *sv_minPing;
+cvar_t *sv_privateClients;
+cvar_t *sv_privatePassword;
+cvar_t *sv_reconnectlimit;
 
 // Custom cvars
 cvar_t *fs_callbacks;
@@ -77,6 +83,12 @@ void custom_Com_Init(char *commandLine)
     
     // Get references to stock cvars
     fs_game = Cvar_FindVar("fs_game");
+    sv_maxclients = Cvar_FindVar("sv_maxclients");
+    sv_maxPing = Cvar_FindVar("sv_maxPing");
+    sv_minPing = Cvar_FindVar("sv_minPing");
+    sv_privateClients = Cvar_FindVar("sv_privateClients");
+    sv_privatePassword = Cvar_FindVar("sv_privatePassword");
+    sv_reconnectlimit = Cvar_FindVar("sv_reconnectlimit");
 
     // Register custom cvars
     Cvar_Get("libcod", "1", CVAR_SERVERINFO);
@@ -158,6 +170,237 @@ void custom_GScr_LoadGameTypeScript()
 
         /*if (*callbacks[i].pos && g_debugCallbacks->integer)
             Com_Printf("%s found @ %p\n", callbacks[i].name, scrVarPub.programBuffer + *callbacks[i].pos);*/ //TODO: verify scrVarPub_t
+    }
+}
+
+const char *getShortVersionFromProtocol(int protocol)
+{
+    switch (protocol)
+    {
+        case 1: return "1.1";
+        case 6: return "1.5";
+        default: return "unknown";
+    }
+}
+void custom_SV_DirectConnect(netadr_t from)
+{
+    char userinfo[MAX_INFO_STRING];
+    int i;
+    client_t *cl, *newcl;
+    gentity_t *ent;
+    int clientNum;
+    int version;
+    int challenge;
+    int qport;
+    const char *PbAuthAddress;
+    const char *PbAuthResult;
+    const char *password;
+    int startIndex;
+    const char *denied;
+    int count;
+    int guid;
+    
+    Com_DPrintf("SV_DirectConnect()\n");
+    
+    I_strncpyz(userinfo, Cmd_Argv(1), sizeof(userinfo));
+    version = atoi(Info_ValueForKey(userinfo, "protocol"));
+    
+    if (version != 1 && version != 6)
+    {
+        NET_OutOfBandPrint(NS_SERVER, from, va("error\nEXE_SERVER_IS_DIFFERENT_VER\x15%s\n", "1.5"));
+        Com_DPrintf("    rejected connect from protocol version %i (should be %i or %i)\n", version, 1, 6);
+        return;
+    }
+    
+    challenge = atoi(Info_ValueForKey(userinfo, "challenge"));
+    qport = atoi(Info_ValueForKey(userinfo, "qport"));
+    
+    for (i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++)
+    {
+        if (NET_CompareBaseAdr(from, cl->netchan.remoteAddress)
+            && (cl->netchan.qport == qport || from.port == cl->netchan.remoteAddress.port))
+        {
+            if ((svs.time - cl->lastConnectTime) < (sv_reconnectlimit->integer * 1000))
+            {
+                Com_DPrintf("%s:reconnect rejected : too soon\n", NET_AdrToString(from));
+                return;
+            }
+            break;
+        }
+    }
+
+    guid = 0;
+
+    if (!NET_IsLocalAddress(from))
+    {
+        int ping;
+
+        for (i = 0 ; i < MAX_CHALLENGES ; i++)
+        {
+            if (NET_CompareAdr(from, svs.challenges[i].adr))
+            {
+                if (challenge == svs.challenges[i].challenge)
+                {
+                    guid = svs.challenges[i].guid;
+                    break;
+                }
+            }
+        }
+
+        if (i == MAX_CHALLENGES)
+        {
+            NET_OutOfBandPrint(NS_SERVER, from, "error\nEXE_BAD_CHALLENGE");
+            return;
+        }
+
+        if (svs.challenges[i].firstPing == 0)
+        {
+            ping = svs.time - svs.challenges[i].pingTime;
+            svs.challenges[i].firstPing = ping;
+        }
+        else
+        {
+            ping = svs.challenges[i].firstPing;
+        }
+
+        Com_Printf("Client %i connecting with %i challenge ping from %s\n", i, ping, NET_AdrToString(from));
+        svs.challenges[i].connected = qtrue;
+
+        if (!Sys_IsLANAddress(from))
+        {
+            if (sv_minPing->integer && ping < sv_minPing->integer)
+            {
+                NET_OutOfBandPrint(NS_SERVER, from, "error\nEXE_ERR_HIGH_PING_ONLY");
+                Com_DPrintf("Client %i rejected on a too low ping\n", i);
+                return;
+            }
+
+            if (sv_maxPing->integer && ping > sv_maxPing->integer)
+            {
+                NET_OutOfBandPrint(NS_SERVER, from, "error\nEXE_ERR_LOW_PING_ONLY");
+                Com_DPrintf("Client %i rejected on a too high ping: %i\n", i, ping);
+                return;
+            }
+        }
+    }
+
+    if (!NET_IsLocalAddress(from))
+    {
+        PbAuthAddress = NET_AdrToString(from);
+    }
+    else
+    {
+        PbAuthAddress = "localhost";
+    }
+    PbAuthResult = PbAuthClient(PbAuthAddress, atoi(Info_ValueForKey(userinfo, "cl_punkbuster")), Info_ValueForKey(userinfo, "cl_guid"));
+    if (!PbAuthResult)
+    {
+        for (i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++)
+        {
+            if (cl->state == CS_FREE)
+            {
+                continue;
+            }
+            if (NET_CompareBaseAdr(from, cl->netchan.remoteAddress)
+                && (cl->netchan.qport == qport || from.port == cl->netchan.remoteAddress.port))
+            {
+                Com_Printf("%s:reconnect\n", NET_AdrToString(from));
+
+                if(cl->state > CS_ZOMBIE )
+                    SV_FreeClient(cl);
+
+                newcl = cl;
+                goto LAB_0808a83b;
+            }
+        }
+
+        password = Info_ValueForKey(userinfo, "password");
+        if (!strcmp(password, sv_privatePassword->string))
+        {
+            startIndex = 0;
+        }
+        else
+        {
+            startIndex = sv_privateClients->integer;
+        }
+
+        newcl = NULL;
+        for (i = startIndex; i < sv_maxclients->integer; i++)
+        {
+            cl = &svs.clients[i];
+            if (cl->state == CS_FREE)
+            {
+                newcl = cl;
+                break;
+            }
+        }
+        if (!newcl)
+        {
+            NET_OutOfBandPrint(NS_SERVER, from, "error\nEXE_SERVERISFULL");
+            Com_DPrintf("Rejected a connection.\n");
+            return;
+        }
+        
+        cl->reliableAcknowledge = 0;
+        cl->reliableSequence = 0;
+LAB_0808a83b:
+        memset(newcl, 0, sizeof(client_t));
+        clientNum = newcl - svs.clients;
+        ent = SV_GentityNum(clientNum);
+        newcl->gentity = ent;
+        newcl->clscriptid = Scr_AllocArray();
+        newcl->challenge = challenge;
+
+        // Save client protocol version
+        customPlayerState[clientNum].protocolVersion = version;
+        Com_Printf("Connecting player #%i runs on version %s\n", clientNum, getShortVersionFromProtocol(version));
+
+        newcl->guid = guid;
+
+        Netchan_Setup(NS_SERVER, &newcl->netchan, from, qport);
+        I_strncpyz(newcl->userinfo, userinfo, sizeof(newcl->userinfo));
+
+        denied = (char *)VM_Call(gvm, 4, clientNum, newcl->clscriptid);
+        if (!denied)
+        {
+            SV_UserinfoChanged(newcl);
+            svs.challenges[i].firstPing = 0;
+            NET_OutOfBandPrint(NS_SERVER, from, "connectResponse");
+            Com_Printf("Going from CS_FREE to CS_CONNECTED for %s (num %i guid %i)\n", newcl->name, clientNum, newcl->guid);
+
+            newcl->state = CS_CONNECTED;
+            newcl->nextSnapshotTime = svs.time;
+            newcl->lastPacketTime = svs.time;
+            newcl->lastConnectTime = svs.time;
+            newcl->gamestateMessageNum = -1;
+            
+            count = 0;
+            for (i = 0, cl = svs.clients; i < sv_maxclients->integer; i++, cl++)
+            {
+                if (svs.clients[i].state >= CS_CONNECTED)
+                {
+                    count++;
+                }
+            }
+            if (count == 1 || count == sv_maxclients->integer)
+            {
+                SV_Heartbeat_f();
+            }
+        }
+        else
+        {
+            NET_OutOfBandPrint(NS_SERVER, from, va("error\n%s", denied));
+            Com_DPrintf("Game rejected a connection: %s.\n", denied);
+            SV_FreeClientScriptId(newcl);
+            return;
+        }
+    }
+    else
+    {
+        if (!strncasecmp(PbAuthResult, "error\n", 6))
+        {
+            NET_OutOfBandPrint(NS_SERVER, from, PbAuthResult);
+        }
     }
 }
 
@@ -323,6 +566,8 @@ class libcod
         hook_call(0x080894c5, (int)hook_AuthorizeState);
         hook_call(0x0809d8f5, (int)Scr_GetCustomFunction);
         hook_call(0x0809db31, (int)Scr_GetCustomMethod);
+
+        hook_jmp(0x08089e7e, (int)custom_SV_DirectConnect);
         
         hook_Sys_LoadDll = new cHook(0x080d3cdd, (int)custom_Sys_LoadDll);
         hook_Sys_LoadDll->hook();
