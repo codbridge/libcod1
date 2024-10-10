@@ -476,23 +476,8 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
     int ammobits[7];
     int statsbits;
     
+    int clientProtocol = customPlayerState[to->clientNum].protocolVersion;
     
-    
-    //printf("##### custom_MSG_WriteDeltaPlayerstate for protocolVersion %i\n", customPlayerState[to->clientNum].protocolVersion);
-
-    if(from != NULL)
-        printf("##### from->clientNum %i\n", from->clientNum);
-    else
-        printf("##### from NULL\n");
-    if(to != NULL)
-        printf("##### to->clientNum %i\n", to->clientNum);
-    else
-        printf("##### to NULL\n");
-
-
-
-
-
     if (!from)
     {
         from = &dummy;
@@ -515,7 +500,14 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
     for (i = 0; i < lc; i++, field++)
     {
         fromF = (int *)((byte *)from + field->offset);
-        toF = (int *)((byte *)to + field->offset);
+        if (clientProtocol == 1 && !strcmp(field->name, "deltaTime"))
+        {
+            toF = (int *)((byte *)to + (field->offset + 4));
+        }
+        else
+        {
+            toF = (int *)((byte *)to + field->offset);
+        }
         
         if (*fromF == *toF)
         {
@@ -546,6 +538,10 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
             {
                 absto = *toF;
                 absbits = field->bits;
+                if (clientProtocol == 1 && !strcmp(field->name, "pm_flags"))
+                {
+                    absbits -= 2;
+                }
                 if (absbits < 0)
                     absbits *= -1;
                 abs3bits = absbits & 7;
@@ -696,7 +692,7 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
     }
 }
 
-#if 1
+#if 0
 void custom_MSG_ReadDeltaPlayerstate(msg_t *msg, playerState_t *from, playerState_t *to)
 {
     printf("##### custom_MSG_ReadDeltaPlayerstate\n");
@@ -1045,8 +1041,10 @@ class libcod
         hook_jmp(0x08089e7e, (int)custom_SV_DirectConnect);
         hook_jmp(0x08097c2f, (int)custom_SV_SendClientSnapshot);
         hook_jmp(0x08081dd3, (int)custom_MSG_WriteDeltaPlayerstate);
+#if 0
         hook_jmp(0x08082640, (int)custom_MSG_ReadDeltaPlayerstate);
-        
+#endif
+
         hook_Sys_LoadDll = new cHook(0x080d3cdd, (int)custom_Sys_LoadDll);
         hook_Sys_LoadDll->hook();
         hook_Com_Init = new cHook(0x08070ef8, (int)custom_Com_Init);
