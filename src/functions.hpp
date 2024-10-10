@@ -86,6 +86,27 @@ static const MSG_WriteDeltaObjective_t MSG_WriteDeltaObjective = (MSG_WriteDelta
 
 typedef void (*MSG_WriteDeltaHudElems_t)(msg_t *msg, hudelem_t *from, hudelem_t *to, int count);
 static const MSG_WriteDeltaHudElems_t MSG_WriteDeltaHudElems = (MSG_WriteDeltaHudElems_t)0x08081aff;
+
+typedef int (*MSG_ReadByte_t)(msg_t *msg);
+static const MSG_ReadByte_t MSG_ReadByte = (MSG_ReadByte_t)0x08080053;
+
+typedef int (*MSG_ReadBit_t)(msg_t *msg);
+static const MSG_ReadBit_t MSG_ReadBit = (MSG_ReadBit_t)0x0807fbc2;
+
+typedef int (*MSG_ReadLong_t)(msg_t *msg);
+static const MSG_ReadLong_t MSG_ReadLong = (MSG_ReadLong_t)0x080800e8;
+
+typedef int (*MSG_ReadBits_t)(msg_t *msg, int bits);
+static const MSG_ReadBits_t MSG_ReadBits = (MSG_ReadBits_t)0x0807fb40;
+
+typedef int (*MSG_ReadShort_t)(msg_t *msg);
+static const MSG_ReadShort_t MSG_ReadShort = (MSG_ReadShort_t)0x08080093;
+
+typedef void (*MSG_ReadDeltaObjective_t)(msg_t *msg, objective_t *from, objective_t *to, int numFields, netField_t *objFields);
+static const MSG_ReadDeltaObjective_t MSG_ReadDeltaObjective = (MSG_ReadDeltaObjective_t)0x0808179b;
+
+typedef void (*MSG_ReadDeltaHudElems_t)(msg_t *msg, hudelem_t *from, hudelem_t *to, int count);
+static const MSG_ReadDeltaHudElems_t MSG_ReadDeltaHudElems = (MSG_ReadDeltaHudElems_t)0x08081c74;
 ////
 
 //// NET

@@ -22,6 +22,9 @@
 #define MAX_STRINGLENGTH            1024
 #define MAX_WEAPONS                 64
 #define MAX_OBJECTIVES              16
+#define MAX_HUDELEMENTS             31
+#define MAX_HUDELEMS_ARCHIVAL       MAX_HUDELEMENTS
+#define MAX_HUDELEMS_CURRENT        MAX_HUDELEMENTS
 
 #define CVAR_NOFLAG         0               // 0x0000
 #define CVAR_ARCHIVE        (1 << 0)        // 0x0001
@@ -245,14 +248,9 @@ typedef struct
     int cmdType;
 } reliableCommands_t;
 
-typedef enum
-{
-    //...
-} objectiveState_t;
-
 typedef struct objective_s
 {
-    objectiveState_t state;
+    int state;
     vec3_t origin;
     int entNum;
     int teamNum;
@@ -483,7 +481,7 @@ static const int objectiveFields_offset = 0x080e9a80;
 #define svs (*((serverStatic_t*)(svs_offset)))
 #define gvm (*(vm_t**)(gvm_offset))
 #define playerStateFields (*((netField_t*)(playerStateFields_offset)))
-#define objectiveFields (*((netField_t*)( objectiveFields_offset )))
+#define objectiveFields (*((netField_t*)(objectiveFields_offset)))
 
 // Require structure sizes to match
 #if __GNUC__ >= 6

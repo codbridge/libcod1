@@ -13,6 +13,7 @@ cvar_t *sv_privatePassword;
 cvar_t *sv_reconnectlimit;
 
 // Custom cvars
+cvar_t *cl_shownet;
 cvar_t *fs_callbacks;
 cvar_t *fs_callbacks_additional;
 cvar_t *sv_botHook;
@@ -93,6 +94,7 @@ void custom_Com_Init(char *commandLine)
     // Register custom cvars
     Cvar_Get("libcod", "1", CVAR_SERVERINFO);
 
+    cl_shownet = Cvar_Get("cl_shownet", "0", CVAR_ARCHIVE);
     fs_callbacks = Cvar_Get("fs_callbacks", "maps/mp/gametypes/_callbacksetup", CVAR_ARCHIVE);
     fs_callbacks_additional = Cvar_Get("fs_callbacks_additional", "", CVAR_ARCHIVE);
     sv_botHook = Cvar_Get("sv_botHook", "0", CVAR_ARCHIVE);
@@ -464,7 +466,7 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
     int i, j, lc;
     int *toF, *fromF;
     netField_t *field;
-    playerState_t nullstate;
+    playerState_t dummy;
     float fullFloat;
     int trunc;
     int32_t absbits;
@@ -473,11 +475,28 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
     int clipbits;
     int ammobits[7];
     int statsbits;
+    
+    
+    
+    //printf("##### custom_MSG_WriteDeltaPlayerstate for protocolVersion %i\n", customPlayerState[to->clientNum].protocolVersion);
+
+    if(from != NULL)
+        printf("##### from->clientNum %i\n", from->clientNum);
+    else
+        printf("##### from NULL\n");
+    if(to != NULL)
+        printf("##### to->clientNum %i\n", to->clientNum);
+    else
+        printf("##### to NULL\n");
+
+
+
+
 
     if (!from)
     {
-        from = &nullstate;
-        memset(&nullstate, 0, sizeof(nullstate));
+        from = &dummy;
+        memset(&dummy, 0, sizeof(dummy));
     }
 
     lc = 0;
@@ -569,7 +588,7 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
         if (statsbits & 4U)
             MSG_WriteShort(msg, to->stats[2]);
         if (statsbits & 8U)
-            MSG_WriteBits(msg, to->stats[3],6);
+            MSG_WriteBits(msg, to->stats[3], 6);
         if (statsbits & 0x10U)
             MSG_WriteShort(msg, to->stats[4]);
         if (statsbits & 0x20U)
@@ -672,10 +691,193 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
     else
     {
         MSG_WriteBit1(msg);
-        MSG_WriteDeltaHudElems(msg, from->hud.archival, to->hud.archival, 0x1F);
-        MSG_WriteDeltaHudElems(msg, from->hud.current, to->hud.current, 0x1F);
+        MSG_WriteDeltaHudElems(msg, from->hud.archival, to->hud.archival, MAX_HUDELEMS_ARCHIVAL);
+        MSG_WriteDeltaHudElems(msg, from->hud.current, to->hud.current, MAX_HUDELEMS_CURRENT);
     }
 }
+
+#if 1
+void custom_MSG_ReadDeltaPlayerstate(msg_t *msg, playerState_t *from, playerState_t *to)
+{
+    printf("##### custom_MSG_ReadDeltaPlayerstate\n");
+
+    int *fromF, *toF;
+    netField_t *field;
+    playerState_t dummy;
+    int readbits;
+    int readbyte;
+    uint32_t unsignedbits;
+    int i, j, k, lc;
+    qboolean print;
+    
+    if (!from)
+    {
+        from = &dummy;
+        memset(&dummy, 0, sizeof(dummy));
+    }
+
+    memcmp(to, from, sizeof(playerState_t));
+
+    lc = 0;
+
+    if (cl_shownet && (cl_shownet->integer > 1 || cl_shownet->integer == -2))
+    {
+        print = 1;
+        Com_Printf("%3i: playerstate ", msg->cursize);
+    }
+    else
+    {
+        print = 0;
+    }
+    
+    lc = MSG_ReadByte(msg);
+
+    for (i = 0, field = &playerStateFields ; i < lc ; i++, field++)
+    {
+        fromF = (int32_t *)((byte *)from + field->offset);
+        toF = (int32_t *)((byte *)to + field->offset);
+
+        if (!MSG_ReadBit(msg))
+        {
+            *toF = *fromF;
+            continue;
+        }
+        
+        if (!field->bits)
+        {
+            if (MSG_ReadBit(msg))
+            {
+                *toF = MSG_ReadLong(msg);
+                if (print)
+                    Com_Printf("%s:%f ", field->name, *(float *)toF);
+            }
+            else
+            {
+                readbits = MSG_ReadBits(msg, 5);
+                readbyte = 32 * MSG_ReadByte(msg) + readbits - 4096;
+                *(float *)toF = (float)readbyte;
+                if (print)
+                    Com_Printf("%s:%i ", field->name, readbyte);
+            }
+        }
+        else
+        {
+            unsignedbits = (unsigned int)field->bits >> 31;
+            readbits = abs(field->bits);
+            if ((readbits & 7) != 0)
+                readbyte = MSG_ReadBits(msg, readbits & 7);
+            else
+                readbyte = 0;
+            for (k = readbits & 7; k < readbits; k += 8)
+                readbyte |= MSG_ReadByte(msg) << k;
+            if (unsignedbits && ((readbyte >> (readbits - 1)) & 1) != 0)
+                readbyte |= ~((1 << readbits) - 1);
+            *toF = readbyte;
+            if (print)
+                Com_Printf("%s:%i ", field->name, *toF);
+        }
+    }
+
+    for (i = lc, field = &playerStateFields; i < 0x67; i++, field++)
+    {
+        fromF = (int32_t *)((byte *)from + field->offset);
+        toF = (int32_t *)((byte *)to + field->offset);
+
+        *toF = *fromF;
+    }
+    
+    int statsbits = 0;
+    if (MSG_ReadBit(msg))
+    {
+        if (cl_shownet && cl_shownet->integer == 4)
+        {
+            Com_Printf("%s ", "PS_STATS");
+        }
+
+        statsbits = MSG_ReadBits(msg, 6);
+
+        if((statsbits & 1) != 0)
+            to->stats[0] = MSG_ReadShort(msg);
+
+        if((statsbits & 2) != 0)
+            to->stats[1] = MSG_ReadShort(msg);
+
+        if((statsbits & 4) != 0)
+            to->stats[2] = MSG_ReadShort(msg);
+
+        if((statsbits & 8) != 0)
+            to->stats[3] = MSG_ReadBits(msg, 6);
+
+        if((statsbits & 0x10) != 0)
+            to->stats[4] = MSG_ReadShort(msg);
+
+        if((statsbits & 0x20) != 0)
+            to->stats[5] = MSG_ReadByte(msg);
+    }
+
+    int ammobits = 0;
+    if (MSG_ReadBit(msg))
+    {
+        for (i = 0; i < 4; ++i)
+        {
+            if (MSG_ReadBit(msg))
+            {
+                if (cl_shownet && cl_shownet->integer == 4)
+                {
+                    Com_Printf("%s ", "PS_AMMO");
+                }
+
+                ammobits = MSG_ReadShort(msg);
+
+                for (j = 0; j < 16; ++j)
+                {
+                    if (((ammobits >> j) & 1) != 0)
+                    {
+                        to->ammo[j + 16 * i] = MSG_ReadShort(msg);
+                    }
+                }
+            }
+        }
+    }
+
+    int clipbits = 0;
+    for (i = 0; i < 4; ++i)
+    {
+        if (MSG_ReadBit(msg))
+        {
+            if (cl_shownet && cl_shownet->integer == 4)
+            {
+                Com_Printf("%s ", "PS_AMMOCLIP");
+            }
+
+            clipbits = MSG_ReadShort(msg);
+
+            for (j = 0; j < 16; ++j)
+            {
+                if (((clipbits >> j) & 1) != 0)
+                {
+                    to->ammoclip[j + 16 * i] = MSG_ReadShort(msg);
+                }
+            }
+        }
+    }
+
+    if (MSG_ReadBit(msg))
+    {
+        for (i = 0; i < MAX_OBJECTIVES; ++i)
+        {
+            to->objective[i].state = MSG_ReadBits(msg, 3);
+            MSG_ReadDeltaObjective(msg, &from->objective[i], &to->objective[i], 6, &objectiveFields);
+        }
+    }
+
+    if (MSG_ReadBit(msg))
+    {
+        MSG_ReadDeltaHudElems(msg, from->hud.archival, to->hud.archival, MAX_HUDELEMS_ARCHIVAL);
+        MSG_ReadDeltaHudElems(msg, from->hud.current, to->hud.current, MAX_HUDELEMS_CURRENT);
+    }
+}
+#endif
 
 void hook_ClientCommand(int clientNum)
 {
@@ -843,6 +1045,7 @@ class libcod
         hook_jmp(0x08089e7e, (int)custom_SV_DirectConnect);
         hook_jmp(0x08097c2f, (int)custom_SV_SendClientSnapshot);
         hook_jmp(0x08081dd3, (int)custom_MSG_WriteDeltaPlayerstate);
+        hook_jmp(0x08082640, (int)custom_MSG_ReadDeltaPlayerstate);
         
         hook_Sys_LoadDll = new cHook(0x080d3cdd, (int)custom_Sys_LoadDll);
         hook_Sys_LoadDll->hook();
