@@ -1077,6 +1077,23 @@ float custom_PM_GetReducedFriction()
         return 1.0;
 }
 
+float custom_PM_GetLandFactor()
+{
+    playerState_t *ps;
+
+    ps = (*pm)->ps;
+    
+    if (customPlayerState[ps->clientNum].protocolVersion != 1)
+    {
+        if (ps->pm_time < 1700)
+            return (float)ps->pm_time * 1.5 * 0.00058823527 + 1.0;
+        else
+            return 2.5;
+    }
+    else
+        return 1.0;
+}
+
 void ServerCrash(int sig)
 {
     int fd;
@@ -1185,6 +1202,7 @@ void *custom_Sys_LoadDll(const char *name, char *fqpath, int (**entryPoint)(int,
 
     hook_jmp((int)dlsym(libHandle, "_init") + 0xD23D, (int)custom_PM_WalkMove);
     hook_jmp((int)dlsym(libHandle, "_init") + 0xBBF1, (int)custom_PM_GetReducedFriction);
+    hook_jmp((int)dlsym(libHandle, "_init") + 0xBC52, (int)custom_PM_GetLandFactor);
 
     hook_GScr_LoadGameTypeScript = new cHook((int)dlsym(libHandle, "GScr_LoadGameTypeScript"), (int)custom_GScr_LoadGameTypeScript);
     hook_GScr_LoadGameTypeScript->hook();
