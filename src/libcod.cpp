@@ -21,6 +21,8 @@ cvar_t *sv_cracked;
 
 // Game lib objects
 gentity_t *g_entities;
+pmove_t **pm;
+pml_t *pml;
 
 // Game lib functions
 ClientCommand_t ClientCommand;
@@ -45,6 +47,16 @@ Scr_ExecEntThread_t Scr_ExecEntThread;
 Scr_FreeThread_t Scr_FreeThread;
 trap_Argv_t trap_Argv;
 va_t va;
+VectorNormalize_t VectorNormalize;
+PM_CheckJump_t PM_CheckJump;
+PM_AirMove_t PM_AirMove;
+PM_Friction_t PM_Friction;
+PM_CmdScale_Walk_t PM_CmdScale_Walk;
+PM_ClipVelocity_t PM_ClipVelocity;
+PM_GetEffectiveStance_t PM_GetEffectiveStance;
+PM_Accelerate_t PM_Accelerate;
+PM_StepSlideMove_t PM_StepSlideMove;
+PM_SetMovementDir_t PM_SetMovementDir;
 
 // Stock callbacks
 int codecallback_startgametype = 0;
@@ -913,6 +925,141 @@ void hook_ClientCommand(int clientNum)
     Scr_FreeThread(ret);
 }
 
+vec_t VectorLength(const vec3_t v)
+{
+    return sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+}
+void Jump_ClearState(playerState_s *ps)
+{
+    ps->pm_flags &= ~0x2000u;
+    ps->jumpOriginZ = 0.0;
+}
+void Jump_ApplySlowdown(playerState_s *ps)
+{
+    float scale;
+
+    scale = 1.0;
+
+    if (ps->pm_time <= 1800)
+    {
+        if (!ps->pm_time)
+        {
+            if (ps->jumpOriginZ + 18.0 <= ps->origin[2])
+            {
+                ps->pm_time = 1200;
+                scale = 0.5;
+            }
+            else
+            {
+                ps->pm_time = 1800;
+                scale = 0.64999998;
+            }
+        }
+    }
+    else
+    {
+        Jump_ClearState(ps);
+        scale = 0.64999998;
+    }
+    
+    VectorScale(ps->velocity, scale, ps->velocity);
+}
+void custom_PM_WalkMove()
+{
+    playerState_t *ps;
+    int stance;
+    float len;
+    float accel;
+    usercmd_t cmd;
+    float cmdscale;
+    float wishspeed;
+    vec3_t wishdir;
+    float rightmove;
+    float forwardmove;
+    vec3_t wishvel;
+    vec3_t dir;
+    int i;
+    
+    ps = (*pm)->ps;
+    
+    if ((*pm)->ps->pm_flags & 0x2000)
+    {
+        if(customPlayerState[ps->clientNum].protocolVersion != 1)
+            Jump_ApplySlowdown(ps);
+    }
+    
+    if (PM_CheckJump())
+    {
+        PM_AirMove();
+        ps->jumpTime = (*pm)->cmd.serverTime;
+    }
+    else
+    {
+        PM_Friction();
+        forwardmove = (float)(*pm)->cmd.forwardmove;
+        rightmove = (float)(*pm)->cmd.rightmove;
+        cmd = (*pm)->cmd;
+        cmdscale = PM_CmdScale_Walk(&cmd);
+
+        pml->forward[2] = 0.0;
+        pml->right[2] = 0.0;
+
+        PM_ClipVelocity(pml->forward, pml->groundTrace.normal, pml->forward, OVERCLIP);
+        PM_ClipVelocity(pml->right, pml->groundTrace.normal, pml->right, OVERCLIP);
+
+        VectorNormalize(pml->forward);
+        VectorNormalize(pml->right);
+
+        for(i = 0; i < 3; ++i)
+            dir[i] = pml->forward[i] * forwardmove + pml->right[i] * rightmove;
+
+        VectorCopy(dir, wishdir);
+        wishspeed = VectorNormalize(wishdir);
+        wishspeed = wishspeed * cmdscale;
+        stance = PM_GetEffectiveStance(ps);
+
+        if ((pml->groundTrace.surfaceFlags & 2) || (ps->pm_flags & 0x200))
+        {
+            accel = 1.0;
+        }
+        else if (stance == 1)
+        {
+            accel = 19.0;
+        }
+        else if (stance == 2)
+        {
+            accel = 12.0;
+        }
+        else
+        {
+            accel = 9.0;
+        }
+
+        if(ps->pm_flags & 0x100)
+            accel = accel * 0.25;
+
+        PM_Accelerate(wishdir, wishspeed, accel);
+
+        if ((pml->groundTrace.surfaceFlags & 2) || (ps->pm_flags & 0x200))
+            ps->velocity[2] = ps->velocity[2] - (float)ps->gravity * pml->frametime;
+        
+        len = VectorLength(ps->velocity);
+        VectorCopy(ps->velocity, wishvel);
+        PM_ClipVelocity(ps->velocity, pml->groundTrace.normal, ps->velocity, OVERCLIP);
+
+        if (DotProduct(ps->velocity, wishvel) > 0.0)
+        {
+            VectorNormalize(ps->velocity);
+            VectorScale(ps->velocity, len, ps->velocity);
+        }
+
+        if(ps->velocity[0] != 0.0 || ps->velocity[1] != 0.0)
+            PM_StepSlideMove(0);
+        
+        PM_SetMovementDir();
+    }
+}
+
 void ServerCrash(int sig)
 {
     int fd;
@@ -977,6 +1124,8 @@ void *custom_Sys_LoadDll(const char *name, char *fqpath, int (**entryPoint)(int,
 
     //// Objects
     g_entities = (gentity_t*)dlsym(libHandle, "g_entities");
+    pm = (pmove_t**)dlsym(libHandle, "pm");
+    pml = (pml_t*)dlsym(libHandle, "pml");
     ////
 
     //// Functions
@@ -1002,9 +1151,22 @@ void *custom_Sys_LoadDll(const char *name, char *fqpath, int (**entryPoint)(int,
     Scr_FreeThread = (Scr_FreeThread_t)dlsym(libHandle, "Scr_FreeThread");
     trap_Argv = (trap_Argv_t)dlsym(libHandle, "trap_Argv");
     va = (va_t)dlsym(libHandle, "va");
+
+    VectorNormalize = (VectorNormalize_t)dlsym(libHandle, "VectorNormalize");
+    PM_CheckJump = (PM_CheckJump_t)((int)dlsym(libHandle, "_init") + 0xCB85);
+    PM_AirMove = (PM_AirMove_t)((int)dlsym(libHandle, "_init") + 0xD08D);
+    PM_Friction = (PM_Friction_t)((int)dlsym(libHandle, "_init") + 0xBCB3);
+    PM_CmdScale_Walk = (PM_CmdScale_Walk_t)((int)dlsym(libHandle, "_init") + 0xC28B);
+    PM_ClipVelocity = (PM_ClipVelocity_t)dlsym(libHandle, "PM_ClipVelocity");
+    PM_GetEffectiveStance = (PM_GetEffectiveStance_t)dlsym(libHandle, "PM_GetEffectiveStance");
+    PM_Accelerate = (PM_Accelerate_t)((int)dlsym(libHandle, "_init") + 0xBF62);
+    PM_StepSlideMove = (PM_StepSlideMove_t)dlsym(libHandle, "PM_StepSlideMove");
+    PM_SetMovementDir = (PM_SetMovementDir_t)((int)dlsym(libHandle, "_init") + 0xC68F);
     ////
 
     hook_call((int)dlsym(libHandle, "vmMain") + 0xF0, (int)hook_ClientCommand);
+
+    hook_jmp((int)dlsym(libHandle, "_init") + 0xD23D, (int)custom_PM_WalkMove);
 
     hook_GScr_LoadGameTypeScript = new cHook((int)dlsym(libHandle, "GScr_LoadGameTypeScript"), (int)custom_GScr_LoadGameTypeScript);
     hook_GScr_LoadGameTypeScript->hook();

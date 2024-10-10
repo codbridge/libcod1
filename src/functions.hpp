@@ -124,6 +124,20 @@ static const NET_OutOfBandPrint_t NET_OutOfBandPrint = (NET_OutOfBandPrint_t)0x0
 
 typedef qboolean (*NET_CompareAdr_t)(netadr_t a, netadr_t b);
 static const NET_CompareAdr_t NET_CompareAdr = (NET_CompareAdr_t)0x0808400f;
+
+typedef vec_t (*VectorNormalize_t)(vec3_t inout);
+////
+
+//// PM
+typedef bool (*PM_CheckJump_t)();
+typedef void (*PM_AirMove_t)();
+typedef void (*PM_Friction_t)();
+typedef float (*PM_CmdScale_Walk_t)(usercmd_t *cmd);
+typedef void (*PM_ClipVelocity_t)(const float *in, const float *normal, float *out, float overbounce);
+typedef int (*PM_GetEffectiveStance_t)(playerState_t *ps);
+typedef void (*PM_Accelerate_t)(float *wishdir, float wishspeed, float accel);
+typedef void (*PM_StepSlideMove_t)(int gravity);
+typedef void (*PM_SetMovementDir_t)();
 ////
 
 //// Scr

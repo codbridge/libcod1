@@ -2,7 +2,10 @@
 #define qtrue   1
 #define qfalse  0
 
-#define VectorCopy(a, b) ((b)[0] = (a)[0],(b)[1] = (a)[1],(b)[2] = (a)[2])
+// 3D vectors
+#define DotProduct(a,b)         ((a)[0]*(b)[0]+(a)[1]*(b)[1]+(a)[2]*(b)[2])
+#define VectorCopy(a,b)         ((b)[0]=(a)[0],(b)[1]=(a)[1],(b)[2]=(a)[2])
+#define	VectorScale(v, s, o)    ((o)[0]=(v)[0]*(s),(o)[1]=(v)[1]*(s),(o)[2]=(v)[2]*(s))
 
 #define FLOAT_INT_BITS  13
 #define FLOAT_INT_BIAS  (1 << (FLOAT_INT_BITS - 1)) // 0x1000
@@ -50,6 +53,8 @@
 
 #define EF_CROUCHING    0x20
 #define EF_PRONE        0x40
+
+#define OVERCLIP        1.001
 
 typedef void (*xcommand_t)(void);
 
@@ -207,6 +212,14 @@ typedef struct netField_s
     int bits;
 } netField_t;
 
+typedef struct trace_s
+{
+    byte gap[0x10];     // pml + 0x38
+    vec3_t normal;      // pml + 0x48
+    int surfaceFlags;   // pml + 0x54
+    byte gap_[16];      // pml + 0x58
+} trace_t;
+
 typedef struct usercmd_s
 {
     int serverTime;
@@ -339,7 +352,7 @@ typedef struct playerState_s
     unsigned int weaponrechamber[MAX_WEAPONS / (sizeof(int) * 8)];    // 0x31c
     vec3_t mins;                // 0x324
     vec3_t maxs;                // 0x330
-    byte gap_0x33C[0x2C];             // 0x33C
+    byte gap_0x33C[0x2C];       // 0x33C
     float proneDirection;       // 0x368
     float proneDirectionPitch;  // 0x36c
     float proneTorsoPitch;      // 0x370
@@ -486,6 +499,28 @@ typedef struct
     //...
 } serverStatic_t;
 
+struct pmove_t
+{
+    playerState_t *ps;
+    usercmd_t cmd;
+    //...
+};
+
+struct pml_t
+{
+    vec3_t forward;     // 0x0
+    vec3_t right;       // 0xC
+    vec3_t up;          // 0x18
+    float frametime;    // 0x24
+    int msec;           // 0x28
+    int walking;        // 0x2C
+    int groundPlane;    // 0x30
+    int almostGroundPlane;  // 0x34
+    trace_t groundTrace;    // 0x38
+    float impactSpeed;      // 0x68
+    //...
+};
+
 extern gentity_t *g_entities;
 
 static const int svs_offset = 0x083ccd80;
@@ -510,6 +545,7 @@ static_assert((sizeof(netadr_t) == 20), "ERROR: netadr_t size is invalid");
 static_assert((sizeof(gentity_t) == 796), "ERROR: gentity_t size is invalid!");
 static_assert((sizeof(hudElemState_t) == 6944), "ERROR: hudElemState_t size is invalid!");
 static_assert((sizeof(objective_t) == 28), "ERROR: objective_t size is invalid!");
+static_assert((sizeof(trace_t) == 48), "ERROR: trace_t size is invalid!");
 #endif
 
 
