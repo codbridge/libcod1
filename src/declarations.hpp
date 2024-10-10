@@ -282,19 +282,7 @@ typedef enum
 
 typedef enum
 {
-    WEAPON_READY = 0x0,
-    WEAPON_RAISING = 0x1,
-    WEAPON_DROPPING = 0x2,
-    WEAPON_FIRING = 0x3,
-    WEAPON_RECHAMBERING = 0x4,
-    WEAPON_RELOADING = 0x5,
-    WEAPON_RELOADING_INTERUPT = 0x6,
-    WEAPON_RELOAD_START = 0x7,
-    WEAPON_RELOAD_START_INTERUPT = 0x8,
-    WEAPON_RELOAD_END = 0x9,
-    WEAPON_MELEE_INIT = 0xA,
-    WEAPON_MELEE_FIRE = 0xB,
-    WEAPONSTATES_NUM = 0xC,
+    //...
 } weaponstate_t;
 
 typedef struct playerState_s
@@ -335,7 +323,14 @@ typedef struct playerState_s
     vec3_t viewangles;          // 0xC0
     int viewHeightTarget;       // 0xCC
     float viewHeightCurrent;    // 0xD0
-    byte gap[0x20];             // 0xD4
+    int viewHeightLerpTime;     // 0xD4
+    int viewHeightLerpTarget;   // 0xD8
+    int viewHeightLerpDown;     // 0xDC
+    float viewHeightLerpPosAdj; // 0xE0
+    int damageEvent;            // 0xe4
+    int damageYaw;              // 0xe8
+    int damagePitch;            // 0xec
+    int damageCount;            // 0xf0
     int stats[6];               // 0xf4
     int ammo[MAX_WEAPONS];      // 0x10c
     int ammoclip[MAX_WEAPONS];  // 0x20c
@@ -344,10 +339,32 @@ typedef struct playerState_s
     unsigned int weaponrechamber[MAX_WEAPONS / (sizeof(int) * 8)];    // 0x31c
     vec3_t mins;                // 0x324
     vec3_t maxs;                // 0x330
-    byte gap2[0xAC];            // 0x33C
+    byte gap_0x33C[0x2C];             // 0x33C
+    float proneDirection;       // 0x368
+    float proneDirectionPitch;  // 0x36c
+    float proneTorsoPitch;      // 0x370
+    int viewlocked;             // 0x374
+    int viewlocked_entNum;      // 0x378
+    byte gap_0x37C[8];          // 0x37C
+    int cursorHint;             // 0x384
+    byte gap_0x388[4];          // 0x388
+    int cursorHintString;       // 0x38c
+    byte gap_0x390[0x28];       // 0x390
+    int cursorHintEntIndex;     // 0x3b8
+    byte gap_0x3BC[4];          // 0x3BC
+    int iCompassFriendInfo;     // 0x3C0
+    float fTorsoHeight;         // 0x3c4
+    float fTorsoPitch;          // 0x3c8
+    float fWaistPitch;          // 0x3cc
+    int entityEventSequence;    // 0x3D0
+    int weapAnim;               // 0x3d4
+    float aimSpreadScale;       // 0x3d8
+    int shellshockIndex;        // 0x3dc
+    int shellshockTime;         // 0x3e0
+    int shellshockDuration;     // 0x3e4
     objective_t objective[MAX_OBJECTIVES];  // 0x3E8
     hudElemState_t hud;         // 0x5A8
-    byte gap3[4];
+    int deltaTime;              // 0x20C8
 } playerState_t;
 
 typedef struct

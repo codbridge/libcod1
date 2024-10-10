@@ -225,12 +225,13 @@ void gsc_testmethod(scr_entref_t ref)
         return;
     }
     
-    client_t* client = &svs.clients[id];
+    //client_t* client = &svs.clients[id];
     //playerState_t *ps = SV_GameClientNum(id);
 
-    printf("###### client->name = %s\n", client->name);   
-    printf("###### client->ping = %i\n", client->ping);
-    printf("###### client->rate = %i\n", client->rate);
+    //printf("###### client->name = %s\n", client->name);
+    
+
+
     
 
 

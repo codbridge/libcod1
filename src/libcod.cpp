@@ -692,7 +692,7 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
     }
 }
 
-#if 0
+#if 1
 void custom_MSG_ReadDeltaPlayerstate(msg_t *msg, playerState_t *from, playerState_t *to)
 {
     printf("##### custom_MSG_ReadDeltaPlayerstate\n");
@@ -1041,7 +1041,7 @@ class libcod
         hook_jmp(0x08089e7e, (int)custom_SV_DirectConnect);
         hook_jmp(0x08097c2f, (int)custom_SV_SendClientSnapshot);
         hook_jmp(0x08081dd3, (int)custom_MSG_WriteDeltaPlayerstate);
-#if 0
+#if 1
         hook_jmp(0x08082640, (int)custom_MSG_ReadDeltaPlayerstate);
 #endif
 
