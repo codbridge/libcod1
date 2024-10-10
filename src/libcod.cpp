@@ -306,7 +306,7 @@ void custom_SV_DirectConnect(netadr_t from)
             {
                 Com_Printf("%s:reconnect\n", NET_AdrToString(from));
 
-                if(cl->state > CS_ZOMBIE )
+                if(cl->state > CS_ZOMBIE)
                     SV_FreeClient(cl);
 
                 newcl = cl;
@@ -401,6 +401,279 @@ LAB_0808a83b:
         {
             NET_OutOfBandPrint(NS_SERVER, from, PbAuthResult);
         }
+    }
+}
+
+void custom_SV_SendClientSnapshot(client_t *client)
+{
+    byte msg_buf[MAX_MSGLEN];
+    msg_t msg;
+
+    if (client->state == CS_ACTIVE || client->state == CS_ZOMBIE)
+    {
+        SV_BuildClientSnapshot(client);
+    }
+
+    MSG_Init(&msg, msg_buf, sizeof(msg_buf));
+    MSG_WriteLong(&msg, client->lastClientCommand);
+
+    if (client->state == CS_ACTIVE || client->state == CS_ZOMBIE)
+    {
+        SV_UpdateServerCommandsToClient(client, &msg);
+        SV_WriteSnapshotToClient(client, &msg);
+    }
+
+    if (client->state != CS_ZOMBIE)
+    {
+        SV_WriteDownloadToClient(client, &msg);
+    }
+
+    MSG_WriteByte(&msg, svc_EOF);
+
+    if (msg.overflowed)
+    {
+        Com_Printf("WARNING: msg overflowed for %s, trying to recover\n", client->name);
+
+        if (client->state == CS_ACTIVE || client->state == CS_ZOMBIE)
+        {
+            SV_PrintServerCommandsForClient(client);
+
+            MSG_Init(&msg, msg_buf, sizeof(msg_buf));
+            MSG_WriteLong(&msg, client->lastClientCommand);
+
+            SV_UpdateServerCommandsToClient_PreventOverflow(client, &msg, sizeof(msg_buf)); // Not in 1.1
+
+            MSG_WriteByte(&msg, svc_EOF);
+
+            // + MSG_WriteLong + MSG_WriteString in 1.1
+        }
+
+        if (msg.overflowed)
+        {
+            Com_Printf("WARNING: client disconnected for msg overflow: %s\n", client->name);
+            NET_OutOfBandPrint(NS_SERVER, client->netchan.remoteAddress, "disconnect");
+            SV_DropClient(client, "EXE_SERVERMESSAGEOVERFLOW");
+        }
+    }
+
+    SV_SendMessageToClient(&msg, client);
+}
+
+void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerState_t *to)
+{
+    int i, j, lc;
+    int *toF, *fromF;
+    netField_t *field;
+    playerState_t nullstate;
+    float fullFloat;
+    int trunc;
+    int32_t absbits;
+    uint8_t abs3bits;
+    int32_t absto;
+    int clipbits;
+    int ammobits[7];
+    int statsbits;
+
+    if (!from)
+    {
+        from = &nullstate;
+        memset(&nullstate, 0, sizeof(nullstate));
+    }
+
+    lc = 0;
+    for (i = 0, field = &playerStateFields; i < 0x67; i++, field++)
+    {
+        fromF = (int *)((byte *)from + field->offset);
+        toF = (int *)((byte *)to + field->offset);
+
+        if (*fromF != *toF)
+            lc = i + 1;
+    }
+
+    MSG_WriteByte(msg, lc);
+
+    field = &playerStateFields;
+    for (i = 0; i < lc; i++, field++)
+    {
+        fromF = (int *)((byte *)from + field->offset);
+        toF = (int *)((byte *)to + field->offset);
+        
+        if (*fromF == *toF)
+        {
+            MSG_WriteBit0(msg);
+        }
+        else
+        {
+            MSG_WriteBit1(msg);
+
+            if (!field->bits)
+            {
+                fullFloat = *(float *)toF;
+                trunc = (int)fullFloat;
+                
+                if (trunc == fullFloat && trunc + FLOAT_INT_BIAS >= 0 && trunc + FLOAT_INT_BIAS < (1 << FLOAT_INT_BITS))
+                {
+                    MSG_WriteBit0(msg);
+                    MSG_WriteBits(msg, trunc + FLOAT_INT_BIAS, 5);
+                    MSG_WriteByte(msg, (char)((trunc + 0x1000) >> 5));
+                }
+                else
+                {
+                    MSG_WriteBit1(msg);
+                    MSG_WriteLong(msg, *toF);
+                }
+            }
+            else
+            {
+                absto = *toF;
+                absbits = field->bits;
+                if (absbits < 0)
+                    absbits *= -1;
+                abs3bits = absbits & 7;
+                if (abs3bits)
+                {
+                    MSG_WriteBits(msg, absto, abs3bits);
+                    absbits -= abs3bits;
+                    absto >>= abs3bits;
+                }
+                while (absbits)
+                {
+                    MSG_WriteByte(msg, absto);
+                    absto >>= 8;
+                    absbits -= 8;
+                }
+            }
+        }
+    }
+
+    statsbits = 0;
+    i = 0;
+    while (i < 6)
+    {
+        if (to->stats[i] != from->stats[i])
+            statsbits = statsbits | 1 << ((byte)i & 0x1f);
+        i++;
+    }
+    if (!statsbits)
+    {
+        MSG_WriteBit0(msg);
+    }
+    else
+    {
+        MSG_WriteBit1(msg);
+        MSG_WriteBits(msg, statsbits, 6);
+        if (statsbits & 1U)
+            MSG_WriteShort(msg, to->stats[0]);
+        if (statsbits & 2U)
+            MSG_WriteShort(msg, to->stats[1]);
+        if (statsbits & 4U)
+            MSG_WriteShort(msg, to->stats[2]);
+        if (statsbits & 8U)
+            MSG_WriteBits(msg, to->stats[3],6);
+        if (statsbits & 0x10U)
+            MSG_WriteShort(msg, to->stats[4]);
+        if (statsbits & 0x20U)
+            MSG_WriteByte(msg, (char)to->stats[5]);
+    }
+
+    j = 0;
+    while (j < 4)
+    {
+        ammobits[j] = 0;
+        i = 0;
+        while (i < 0x10)
+        {
+            if (to->ammo[j * 0x10 + i] != from->ammo[j * 0x10 + i])
+                ammobits[j] = 1 << ((byte)i & 0x1f) | ammobits[j];
+            i++;
+        }
+        j++;
+    }
+    if (!ammobits[0] && !ammobits[1] && !ammobits[2] && !ammobits[3])
+    {
+        MSG_WriteBit0(msg);
+    }
+    else
+    {
+        MSG_WriteBit1(msg);
+        j = 0;
+        while (j < 4)
+        {
+            if (ammobits[j] == 0)
+            {
+                MSG_WriteBit0(msg);
+            }
+            else
+            {
+                MSG_WriteBit1(msg);
+                MSG_WriteShort(msg,ammobits[j]);
+                i = 0;
+                while (i < 0x10)
+                {
+                    if ((ammobits[j] >> ((byte)i & 0x1F) & 1) != 0)
+                        MSG_WriteShort(msg, to->ammo[j * 0x10 + i]);
+                    i++;
+                }
+            }
+            j++;
+        }
+    }
+
+    j = 0;
+    while (j < 4)
+    {
+        clipbits = 0;
+        i = 0;
+        while (i < 0x10)
+        {
+            if (to->ammoclip[j * 0x10 + i] != from->ammoclip[j * 0x10 + i])
+                clipbits = clipbits | 1 << ((byte)i & 0x1F);
+            i++;
+        }
+        if (!clipbits)
+        {
+            MSG_WriteBit0(msg);
+        }
+        else
+        {
+            MSG_WriteBit1(msg);
+            MSG_WriteShort(msg,clipbits);
+            i = 0;
+            while (i < 0x10)
+            {
+                if (clipbits >> ((byte)i & 0x1F) & 1)
+                    MSG_WriteShort(msg, to->ammoclip[j * 0x10 + i]);
+                i++;
+            }
+        }
+        j++;
+    }
+
+    if (!memcmp(from->objective, to->objective, sizeof(from->objective)))
+    {
+        MSG_WriteBit0(msg);
+    }
+    else
+    {
+        MSG_WriteBit1(msg);
+        i = 0;
+        while (i < 0x10)
+        {
+            MSG_WriteBits(msg, to->objective[i].state, 3);
+            MSG_WriteDeltaObjective(msg, &from->objective[i], &to->objective[i], 0, 6, &objectiveFields);
+            i++;
+        }
+    }
+
+    if (!memcmp(&from->hud, &to->hud, sizeof(from->hud)))
+    {
+        MSG_WriteBit0(msg);
+    }
+    else
+    {
+        MSG_WriteBit1(msg);
+        MSG_WriteDeltaHudElems(msg, from->hud.archival, to->hud.archival, 0x1F);
+        MSG_WriteDeltaHudElems(msg, from->hud.current, to->hud.current, 0x1F);
     }
 }
 
@@ -568,6 +841,8 @@ class libcod
         hook_call(0x0809db31, (int)Scr_GetCustomMethod);
 
         hook_jmp(0x08089e7e, (int)custom_SV_DirectConnect);
+        hook_jmp(0x08097c2f, (int)custom_SV_SendClientSnapshot);
+        hook_jmp(0x08081dd3, (int)custom_MSG_WriteDeltaPlayerstate);
         
         hook_Sys_LoadDll = new cHook(0x080d3cdd, (int)custom_Sys_LoadDll);
         hook_Sys_LoadDll->hook();

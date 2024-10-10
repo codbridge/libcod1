@@ -59,6 +59,35 @@ typedef char * (*Info_ValueForKey_t)(const char *s, const char *key);
 static const Info_ValueForKey_t Info_ValueForKey = (Info_ValueForKey_t)0x08086397;
 ////
 
+//// MSG
+typedef void (*MSG_Init_t)(msg_t *buf, byte *data, int length);
+static const MSG_Init_t MSG_Init = (MSG_Init_t)0x0807f928;
+
+typedef void (*MSG_WriteLong_t)(msg_t *msg, int c);
+static const MSG_WriteLong_t MSG_WriteLong = (MSG_WriteLong_t)0x0807fdb5;
+
+typedef void (*MSG_WriteByte_t)(msg_t *msg, int c);
+static const MSG_WriteByte_t MSG_WriteByte = (MSG_WriteByte_t)0x0807fcd8;
+
+typedef void (*MSG_WriteBit0_t)(msg_t* msg);
+static const MSG_WriteBit0_t MSG_WriteBit0 = (MSG_WriteBit0_t)0x0807fa4a;
+
+typedef void (*MSG_WriteBit1_t)(msg_t* msg);
+static const MSG_WriteBit1_t MSG_WriteBit1 = (MSG_WriteBit1_t)0x0807faa7;
+
+typedef void (*MSG_WriteBits_t)(msg_t *msg, int value, unsigned int bits);
+static const MSG_WriteBits_t MSG_WriteBits = (MSG_WriteBits_t)0x0807f984;
+
+typedef void (*MSG_WriteShort_t)(msg_t *msg, int c);
+static const MSG_WriteShort_t MSG_WriteShort = (MSG_WriteShort_t)0x0807fd65;
+
+typedef void (*MSG_WriteDeltaObjective_t)(msg_t *msg,objective_t *from,objective_t *to, int lcfield, int numFields, netField_t *objFields);
+static const MSG_WriteDeltaObjective_t MSG_WriteDeltaObjective = (MSG_WriteDeltaObjective_t)0x08081210;
+
+typedef void (*MSG_WriteDeltaHudElems_t)(msg_t *msg, hudelem_t *from, hudelem_t *to, int count);
+static const MSG_WriteDeltaHudElems_t MSG_WriteDeltaHudElems = (MSG_WriteDeltaHudElems_t)0x08081aff;
+////
+
 //// NET
 typedef const char * (*NET_AdrToString_t)(netadr_t a);
 static const NET_AdrToString_t NET_AdrToString = (NET_AdrToString_t)0x08083e10;
@@ -156,4 +185,28 @@ static const SV_Heartbeat_f_t SV_Heartbeat_f = (SV_Heartbeat_f_t)0x08088535;
 
 typedef void (*SV_FreeClientScriptId_t)(client_t *client);
 static const SV_FreeClientScriptId_t SV_FreeClientScriptId = (SV_FreeClientScriptId_t)0x08093e86;
+
+typedef void (*SV_BuildClientSnapshot_t)(client_t *client);
+static const SV_BuildClientSnapshot_t SV_BuildClientSnapshot = (SV_BuildClientSnapshot_t)0x080972d8;
+
+typedef void (*SV_UpdateServerCommandsToClient_t)(client_t *client, msg_t *msg);
+static const SV_UpdateServerCommandsToClient_t SV_UpdateServerCommandsToClient = (SV_UpdateServerCommandsToClient_t)0x080959d0;
+
+typedef void (*SV_WriteSnapshotToClient_t)(client_t *client, msg_t *msg);
+static const SV_WriteSnapshotToClient_t SV_WriteSnapshotToClient = (SV_WriteSnapshotToClient_t)0x0809570c;
+
+typedef void (*SV_WriteDownloadToClient_t)(client_t *client, msg_t *msg);
+static const SV_WriteDownloadToClient_t SV_WriteDownloadToClient = (SV_WriteDownloadToClient_t)0x0808b8a9;
+
+typedef void (*SV_PrintServerCommandsForClient_t)(client_t *client);
+static const SV_PrintServerCommandsForClient_t SV_PrintServerCommandsForClient = (SV_PrintServerCommandsForClient_t)0x08095b2d;
+
+typedef void (*SV_UpdateServerCommandsToClient_PreventOverflow_t)(client_t *client, msg_t *msg, int iMsgSize);
+static const SV_UpdateServerCommandsToClient_PreventOverflow_t SV_UpdateServerCommandsToClient_PreventOverflow = (SV_UpdateServerCommandsToClient_PreventOverflow_t)0x08095a5a;
+
+typedef void (*SV_DropClient_t)(client_t *drop, const char *reason);
+static const SV_DropClient_t SV_DropClient = (SV_DropClient_t)0x0808ac11;
+
+typedef void (*SV_SendMessageToClient_t)(msg_t *msg, client_t *cl);
+static const SV_SendMessageToClient_t SV_SendMessageToClient = (SV_SendMessageToClient_t)0x08097a2f;
 ////
