@@ -58,6 +58,7 @@ PM_GetEffectiveStance_t PM_GetEffectiveStance;
 PM_Accelerate_t PM_Accelerate;
 PM_StepSlideMove_t PM_StepSlideMove;
 PM_SetMovementDir_t PM_SetMovementDir;
+BG_AddPredictableEventToPlayerstate_t BG_AddPredictableEventToPlayerstate;
 
 // Stock callbacks
 int codecallback_startgametype = 0;
@@ -165,6 +166,8 @@ void custom_SV_SendClientGameState(client_t *client)
             MSG_WriteByte(&msg, svc_configstring);
             MSG_WriteShort(&msg, start);
             MSG_WriteBigString(&msg, sv.configstrings[start]);
+
+            printf("###### sv.configstrings[start] = %s\n", sv.configstrings[start]);
         }
     }
 
@@ -996,6 +999,71 @@ void hook_ClientCommand(int clientNum)
     Scr_FreeThread(ret);
 }
 
+void custom_PM_CheckDuck()
+{
+    playerState_t *ps;
+    int bWasStanding;
+    int bWasProne;
+
+
+    ps = (*pm)->ps;
+    (*pm)->proneChange = 0;
+
+    if (ps->pm_type == PM_SPECTATOR)
+    {
+        (*pm)->mins[0] = -8.0;
+        (*pm)->mins[1] = -8.0;
+        (*pm)->mins[2] = -8.0;
+        (*pm)->maxs[0] = 8.0;
+        (*pm)->maxs[1] = 8.0;
+        (*pm)->maxs[2] = 16.0;
+        ps->pm_flags &= 0xFFFFFFFC;
+
+        if ((*pm)->cmd.buttons & 0x40)
+        {
+            (*pm)->cmd.buttons &= ~0x40u;
+            BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_STAND, 0, ps);
+        }
+
+        (*pm)->damagePitch = (*pm)->stats[0];
+        ps->eFlags |= 0x10u;
+        ps->viewHeightTarget = 0;
+        ps->viewHeightCurrent = 0.0;
+    }
+    else
+    {
+        bWasProne = (ps->pm_flags & 1) != 0;
+        bWasStanding = (ps->pm_flags & 3) == 0;
+
+        (*pm)->mins[0] = ps->mins[0];
+        (*pm)->mins[1] = ps->mins[1];
+        (*pm)->maxs[0] = ps->maxs[0];
+        (*pm)->maxs[1] = ps->maxs[1];
+        (*pm)->mins[2] = ps->mins[2];
+
+        if (ps->pm_type <= PM_INTERMISSION)
+        {
+            
+
+
+
+
+        }
+
+
+
+
+
+
+    }
+
+
+
+
+
+
+}
+
 vec_t VectorLength(const vec3_t v)
 {
     return sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
@@ -1267,6 +1335,8 @@ void *custom_Sys_LoadDll(const char *name, char *fqpath, int (**entryPoint)(int,
     PM_Accelerate = (PM_Accelerate_t)((int)dlsym(libHandle, "_init") + 0xBF62);
     PM_StepSlideMove = (PM_StepSlideMove_t)dlsym(libHandle, "PM_StepSlideMove");
     PM_SetMovementDir = (PM_SetMovementDir_t)((int)dlsym(libHandle, "_init") + 0xC68F);
+    BG_AddPredictableEventToPlayerstate = (BG_AddPredictableEventToPlayerstate_t)dlsym(libHandle, "BG_AddPredictableEventToPlayerstate");
+
     ////
 
     hook_call((int)dlsym(libHandle, "vmMain") + 0xF0, (int)hook_ClientCommand);
@@ -1274,6 +1344,7 @@ void *custom_Sys_LoadDll(const char *name, char *fqpath, int (**entryPoint)(int,
     hook_jmp((int)dlsym(libHandle, "_init") + 0xD23D, (int)custom_PM_WalkMove);
     hook_jmp((int)dlsym(libHandle, "_init") + 0xBBF1, (int)custom_PM_GetReducedFriction);
     hook_jmp((int)dlsym(libHandle, "_init") + 0xBC52, (int)custom_PM_GetLandFactor);
+    hook_jmp((int)dlsym(libHandle, "_init") + 0x104C4, (int)custom_PM_CheckDuck);
 
     hook_GScr_LoadGameTypeScript = new cHook((int)dlsym(libHandle, "GScr_LoadGameTypeScript"), (int)custom_GScr_LoadGameTypeScript);
     hook_GScr_LoadGameTypeScript->hook();
@@ -1287,8 +1358,8 @@ class libcod
     libcod()
     {
 #if 0
-        //printf("sizeof(svEntity_t) = %i\n", sizeof(svEntity_t));
-        //exit(0);
+        printf("sizeof(pmove_t) = %i\n", sizeof(pmove_t));
+        exit(0);
 #endif
         
         printf("------------- libcod -------------\n");

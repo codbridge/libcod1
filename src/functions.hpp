@@ -24,6 +24,9 @@ static const PbAuthClient_t PbAuthClient = (PbAuthClient_t)0x080c191c;
 typedef void (*Netchan_Setup_t)(netsrc_t src, netchan_t *chan, netadr_t adr, unsigned int qport);
 static const Netchan_Setup_t Netchan_Setup = (Netchan_Setup_t)0x0808346f;
 
+typedef void (*BG_AddPredictableEventToPlayerstate_t)(int newEvent, int eventParm, playerState_t *ps);
+////
+
 //// Cmd
 typedef char* (*Cmd_Argv_t)(int arg);
 static const Cmd_Argv_t Cmd_Argv = (Cmd_Argv_t)0x080600f4;
