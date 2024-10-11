@@ -107,6 +107,9 @@ static const MSG_ReadDeltaObjective_t MSG_ReadDeltaObjective = (MSG_ReadDeltaObj
 
 typedef void (*MSG_ReadDeltaHudElems_t)(msg_t *msg, hudelem_t *from, hudelem_t *to, int count);
 static const MSG_ReadDeltaHudElems_t MSG_ReadDeltaHudElems = (MSG_ReadDeltaHudElems_t)0x08081c74;
+
+typedef void (*MSG_WriteBigString_t)(msg_t *msg, const char *s);
+static const MSG_WriteBigString_t MSG_WriteBigString = (MSG_WriteBigString_t)0x0807fedb;
 ////
 
 //// NET
@@ -244,4 +247,10 @@ static const SV_DropClient_t SV_DropClient = (SV_DropClient_t)0x0808ac11;
 
 typedef void (*SV_SendMessageToClient_t)(msg_t *msg, client_t *cl);
 static const SV_SendMessageToClient_t SV_SendMessageToClient = (SV_SendMessageToClient_t)0x08097a2f;
+
+typedef void (*SV_Netchan_TransmitNextFragment_t)(netchan_t *chan);
+static const SV_Netchan_TransmitNextFragment_t SV_Netchan_TransmitNextFragment = (SV_Netchan_TransmitNextFragment_t)0x080948d0;
+
+typedef void (*MSG_WriteDeltaEntity_t)(msg_t *msg, struct entityState_s *from, struct entityState_s *to, qboolean force);
+static const MSG_WriteDeltaEntity_t MSG_WriteDeltaEntity = (MSG_WriteDeltaEntity_t)0x0808149a;
 ////

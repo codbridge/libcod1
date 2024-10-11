@@ -9,12 +9,16 @@
 
 #define FLOAT_INT_BITS  13
 #define FLOAT_INT_BIAS  (1 << (FLOAT_INT_BITS - 1)) // 0x1000
+#define GENTITYNUM_BITS 10
 #define PACKET_BACKUP   32
 #define PACKET_MASK     (PACKET_BACKUP - 1)
 
 #define MAX_CHALLENGES              1024
 #define MAX_CLIENTS                 64
+#define MAX_CONFIGSTRINGS           2048
 #define MAX_DOWNLOAD_WINDOW         8
+#define MAX_ENT_CLUSTERS            16
+#define MAX_GENTITIES               (1 << GENTITYNUM_BITS) // 1024
 #define MAX_INFO_STRING             0x400
 #define MAX_MSGLEN                  0x4000
 #define MAX_NETNAME                 36
@@ -82,6 +86,11 @@ enum svc_ops_e
     svc_snapshot,
     svc_EOF
 };
+
+typedef enum
+{
+    //...
+} entityType_t;
 
 typedef enum
 {
@@ -223,8 +232,8 @@ typedef struct trace_s
 typedef struct usercmd_s
 {
     int serverTime;
-    byte buttons; // console, chat, ads, attack, use
-    byte wbuttons; // lean left, lean right, reload
+    byte buttons;   // console, chat, ads, attack, use
+    byte wbuttons;  // lean left, lean right, reload
     byte weapon;
     byte flags;
     int angles[3];
@@ -260,6 +269,58 @@ typedef struct
     int cmdTime;
     int cmdType;
 } reliableCommands_t;
+
+typedef enum
+{
+    //...
+} trType_t;
+
+typedef struct
+{
+    trType_t trType;
+    int trTime;
+    int trDuration;
+    vec3_t trBase;
+    vec3_t trDelta;
+} trajectory_t;
+
+typedef struct entityState_s
+{
+    int number;
+    entityType_t eType;
+    int eFlags;
+    trajectory_t pos;
+    trajectory_t apos;
+    int time;
+    int time2;
+    vec3_t origin2;
+    vec3_t angles2;
+    int otherEntityNum;
+    int attackerEntityNum;
+    int groundEntityNum;
+    int constantLight;
+    int loopSound;
+    int surfType;
+    int index; // modelIndex
+    int clientNum;
+    int iHeadIcon;
+    int iHeadIconTeam;
+    int solid;
+    int eventParm;
+    int eventSequence;
+    int events[4];
+    unsigned int eventParms[4];
+    int weapon;
+    int legsAnim;
+    int torsoAnim;
+    int leanf;
+    int scale; // used as loopfxid, hintstring, ... and doesn't actually scale a player's model size
+    int dmgFlags;
+    int animMovetype;
+    float fTorsoHeight;
+    float fTorsoPitch;
+    float fWaistPitch;
+} entityState_t;
 
 typedef struct objective_s
 {
@@ -347,9 +408,9 @@ typedef struct playerState_s
     int stats[6];               // 0xf4
     int ammo[MAX_WEAPONS];      // 0x10c
     int ammoclip[MAX_WEAPONS];  // 0x20c
-    unsigned int weapons[MAX_WEAPONS / (sizeof(int) * 8)];            // 0x30c
+    unsigned int weapons[MAX_WEAPONS / (sizeof(int) * 8)]; // 0x30c
     byte weaponslots[8];        // 0x314
-    unsigned int weaponrechamber[MAX_WEAPONS / (sizeof(int) * 8)];    // 0x31c
+    unsigned int weaponrechamber[MAX_WEAPONS / (sizeof(int) * 8)]; // 0x31c
     vec3_t mins;                // 0x324
     vec3_t maxs;                // 0x330
     byte gap_0x33C[0x2C];       // 0x33C
@@ -375,7 +436,7 @@ typedef struct playerState_s
     int shellshockIndex;        // 0x3dc
     int shellshockTime;         // 0x3e0
     int shellshockDuration;     // 0x3e4
-    objective_t objective[MAX_OBJECTIVES];  // 0x3E8
+    objective_t objective[MAX_OBJECTIVES]; // 0x3E8
     hudElemState_t hud;         // 0x5A8
     int deltaTime;              // 0x20C8
 } playerState_t;
@@ -476,6 +537,20 @@ typedef struct client_s
 
 typedef struct
 {
+    int svFlags;
+    int clientMask[2];
+    vec3_t absmin;
+    vec3_t absmax;
+} archivedEntityShared_t;
+
+typedef struct archivedEntity_s
+{
+    entityState_t s;
+    archivedEntityShared_t r;
+} archivedEntity_t;
+
+typedef struct
+{
     netadr_t adr;
     int challenge;
     int time;
@@ -491,13 +566,50 @@ typedef struct
 {
     qboolean initialized;
     int time;
+    int time2;
     int snapFlagServerBit;
-    byte gap[2];
     client_t *clients;
-    byte gap2[76];
+    byte gap_83CCD94[0x4C];
     challenge_t challenges[MAX_CHALLENGES];
     //...
 } serverStatic_t;
+
+typedef enum
+{
+    SS_DEAD,
+    SS_LOADING,
+    SS_GAME
+} serverState_t;
+
+typedef struct svEntity_s
+{
+    byte gap[8];
+    archivedEntity_t baseline;
+    int numClusters; // 0x118
+    int clusternums[MAX_ENT_CLUSTERS];
+    int lastCluster;
+    byte gap2[24];
+} svEntity_t;
+
+typedef struct
+{
+    serverState_t state;
+    qboolean restarting;
+    int start_frameTime;
+    int	checksumFeed;
+    int timeResidual;
+    byte gap_836B834[0x404];
+    char *configstrings[MAX_CONFIGSTRINGS];
+    svEntity_t svEntities[MAX_GENTITIES];
+    char *entityParsePoint;
+    gentity_t *gentities;
+    int gentitySize;
+    int	num_entities;
+    playerState_t *gameClients;
+    int gameClientSize;
+    byte gap_83CCC50[0xBC];
+    char gametype[MAX_QPATH];
+} server_t;
 
 struct pmove_t
 {
@@ -523,6 +635,7 @@ struct pml_t
 
 extern gentity_t *g_entities;
 
+static const int sv_offset = 0x0836b820;
 static const int svs_offset = 0x083ccd80;
 static const int vmpub_offset = 0x0830acc0;
 static const int gvm_offset = 0x080ee804;
@@ -530,6 +643,7 @@ static const int playerStateFields_offset = 0x080dc560;
 static const int objectiveFields_offset = 0x080e9a80;
 
 #define scrVmPub (*((scrVmPub_t*)(vmpub_offset)))
+#define sv (*((server_t*)(sv_offset)))
 #define svs (*((serverStatic_t*)(svs_offset)))
 #define gvm (*(vm_t**)(gvm_offset))
 #define playerStateFields (*((netField_t*)(playerStateFields_offset)))
@@ -546,6 +660,10 @@ static_assert((sizeof(gentity_t) == 796), "ERROR: gentity_t size is invalid!");
 static_assert((sizeof(hudElemState_t) == 6944), "ERROR: hudElemState_t size is invalid!");
 static_assert((sizeof(objective_t) == 28), "ERROR: objective_t size is invalid!");
 static_assert((sizeof(trace_t) == 48), "ERROR: trace_t size is invalid!");
+static_assert((sizeof(server_t) == 398636), "ERROR: server_t size is invalid");
+static_assert((sizeof(entityState_t) == 240), "ERROR: entityState_t size is invalid!");
+static_assert((sizeof(svEntity_t) == 380), "ERROR: svEntity_t size is invalid!");
+static_assert((sizeof(archivedEntity_t) == 276), "ERROR: archivedEntity_t size is invalid!");
 #endif
 
 

@@ -4,6 +4,7 @@
 #include "shared.hpp"
 
 // Stock cvars
+cvar_t *com_timescale;
 cvar_t *fs_game;
 cvar_t *sv_maxclients;
 cvar_t *sv_maxPing;
@@ -95,6 +96,7 @@ void custom_Com_Init(char *commandLine)
     hook_Com_Init->hook();
     
     // Get references to stock cvars
+    com_timescale = Cvar_FindVar("timescale");
     fs_game = Cvar_FindVar("fs_game");
     sv_maxclients = Cvar_FindVar("sv_maxclients");
     sv_maxPing = Cvar_FindVar("sv_maxPing");
@@ -120,6 +122,75 @@ const char* hook_AuthorizeState(int arg)
         return "accept";
     return s;
 }
+
+#if 1
+void custom_SV_SendClientGameState(client_t *client)
+{
+    int start;
+    entityState_t *base, nullstate;
+    msg_t msg;
+    byte msgBuffer[MAX_MSGLEN];
+    int clientNum = client - svs.clients;
+    int protocolVersion;
+    
+    while(client->state != CS_FREE && client->netchan.unsentFragments)
+        SV_Netchan_TransmitNextFragment(&client->netchan);
+
+    Com_DPrintf("SV_SendClientGameState() for %s\n", client->name);
+    Com_DPrintf("Going from CS_CONNECTED to CS_PRIMED for %s\n", client->name);
+
+    client->state = CS_PRIMED;
+    client->pureAuthentic = 0;
+    client->gamestateMessageNum = client->netchan.outgoingSequence;
+
+    // Save relevant data before clearing custom player state
+    protocolVersion = customPlayerState[clientNum].protocolVersion;
+    
+    // Reset custom player state to default values
+    memset(&customPlayerState[clientNum], 0, sizeof(customPlayerState_t));
+
+    // Restore previously saved values
+    customPlayerState[clientNum].protocolVersion = protocolVersion;
+
+    MSG_Init(&msg, msgBuffer, sizeof(msgBuffer));
+    MSG_WriteLong(&msg, client->lastClientCommand);
+    SV_UpdateServerCommandsToClient(client, &msg);
+    MSG_WriteByte(&msg, svc_gamestate);
+    MSG_WriteLong(&msg, client->reliableSequence);
+
+    for (start = 0; start < MAX_CONFIGSTRINGS; start++)
+    {
+        if (sv.configstrings[start][0])
+        {
+            MSG_WriteByte(&msg, svc_configstring);
+            MSG_WriteShort(&msg, start);
+            MSG_WriteBigString(&msg, sv.configstrings[start]);
+        }
+    }
+
+    memset(&nullstate, 0, sizeof(nullstate));
+    for (start = 0; start < MAX_GENTITIES; start++)
+    {
+        base = &sv.svEntities[start].baseline.s;
+        if(!base->number)
+            continue;
+        MSG_WriteByte(&msg, svc_baseline);
+        MSG_WriteDeltaEntity(&msg, &nullstate, base, qtrue);
+    }
+
+    MSG_WriteByte(&msg, svc_EOF);
+    MSG_WriteLong(&msg, clientNum);
+    MSG_WriteLong(&msg, sv.checksumFeed);
+    MSG_WriteByte(&msg, svc_EOF);
+
+    Com_DPrintf("Sending %i bytes in gamestate to client: %i\n", msg.cursize, clientNum);
+
+    SV_SendMessageToClient(&msg, client);
+
+    if(com_timescale->integer == 0 && client->state != CS_FREE && client->netchan.unsentFragments)
+        SV_Netchan_TransmitNextFragment(&client->netchan);
+}
+#endif
 
 void custom_SV_BotUserMove(client_t *client)
 {
@@ -234,7 +305,7 @@ void custom_SV_DirectConnect(netadr_t from)
         if (NET_CompareBaseAdr(from, cl->netchan.remoteAddress)
             && (cl->netchan.qport == qport || from.port == cl->netchan.remoteAddress.port))
         {
-            if ((svs.time - cl->lastConnectTime) < (sv_reconnectlimit->integer * 1000))
+            if ((svs.time2 - cl->lastConnectTime) < (sv_reconnectlimit->integer * 1000))
             {
                 Com_DPrintf("%s:reconnect rejected : too soon\n", NET_AdrToString(from));
                 return;
@@ -269,7 +340,7 @@ void custom_SV_DirectConnect(netadr_t from)
 
         if (svs.challenges[i].firstPing == 0)
         {
-            ping = svs.time - svs.challenges[i].pingTime;
+            ping = svs.time2 - svs.challenges[i].pingTime;
             svs.challenges[i].firstPing = ping;
         }
         else
@@ -383,9 +454,9 @@ LAB_0808a83b:
             Com_Printf("Going from CS_FREE to CS_CONNECTED for %s (num %i guid %i)\n", newcl->name, clientNum, newcl->guid);
 
             newcl->state = CS_CONNECTED;
-            newcl->nextSnapshotTime = svs.time;
-            newcl->lastPacketTime = svs.time;
-            newcl->lastConnectTime = svs.time;
+            newcl->nextSnapshotTime = svs.time2;
+            newcl->lastPacketTime = svs.time2;
+            newcl->lastConnectTime = svs.time2;
             newcl->gamestateMessageNum = -1;
             
             count = 0;
@@ -1215,6 +1286,11 @@ class libcod
     public:
     libcod()
     {
+#if 0
+        //printf("sizeof(svEntity_t) = %i\n", sizeof(svEntity_t));
+        //exit(0);
+#endif
+        
         printf("------------- libcod -------------\n");
         printf("Compiled on %s %s using g++ %s\n", __DATE__, __TIME__, __VERSION__);
 
@@ -1241,6 +1317,9 @@ class libcod
         hook_jmp(0x08081dd3, (int)custom_MSG_WriteDeltaPlayerstate);
 #if 1
         hook_jmp(0x08082640, (int)custom_MSG_ReadDeltaPlayerstate);
+#endif
+#if 1
+        hook_jmp(0x0808ae44, (int)custom_SV_SendClientGameState);
 #endif
 
         hook_Sys_LoadDll = new cHook(0x080d3cdd, (int)custom_Sys_LoadDll);
