@@ -58,7 +58,14 @@
 #define EF_CROUCHING    0x20
 #define EF_PRONE        0x40
 
-#define OVERCLIP        1.001
+#define PMF_PRONE       0x1
+#define PMF_CROUCH      0x2
+#define PMF_DUCKED      PMF_CROUCH
+#define PMF_LADDER      0x10
+#define PMF_JUMPING     0x2000
+
+#define JUMP_LAND_SLOWDOWN_TIME 1800
+#define OVERCLIP 1.001
 
 typedef void (*xcommand_t)(void);
 

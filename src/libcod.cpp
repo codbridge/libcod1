@@ -132,7 +132,6 @@ const char* hook_AuthorizeState(int arg)
     return s;
 }
 
-#if 1
 void custom_SV_SendClientGameState(client_t *client)
 {
     int start;
@@ -201,7 +200,6 @@ void custom_SV_SendClientGameState(client_t *client)
     if(com_timescale->integer == 0 && client->state != CS_FREE && client->netchan.unsentFragments)
         SV_Netchan_TransmitNextFragment(&client->netchan);
 }
-#endif
 
 void custom_SV_BotUserMove(client_t *client)
 {
@@ -783,7 +781,6 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
     }
 }
 
-#if 1
 void custom_MSG_ReadDeltaPlayerstate(msg_t *msg, playerState_t *from, playerState_t *to)
 {
     printf("##### custom_MSG_ReadDeltaPlayerstate\n");
@@ -964,7 +961,6 @@ void custom_MSG_ReadDeltaPlayerstate(msg_t *msg, playerState_t *from, playerStat
         MSG_ReadDeltaHudElems(msg, from->hud.current, to->hud.current, MAX_HUDELEMS_CURRENT);
     }
 }
-#endif
 
 void hook_ClientCommand(int clientNum)
 {
@@ -1004,7 +1000,6 @@ void hook_ClientCommand(int clientNum)
     Scr_FreeThread(ret);
 }
 
-#if 1
 void Vec3Lerp(const vec3_t start, const vec3_t end, float fraction, vec3_t endpos)
 {
     endpos[0] = (end[0] - start[0]) * fraction + start[0];
@@ -1035,9 +1030,9 @@ void custom_PM_CheckDuck()
         (*pm)->maxs[2] = 16.0;
         ps->pm_flags &= 0xFFFFFFFC;
 
-        if ((*pm)->cmd.wbuttons & 0x40)
+        if ((*pm)->cmd.wbuttons & KEY_MASK_PRONE)
         {
-            (*pm)->cmd.wbuttons &= ~0x40u;
+            (*pm)->cmd.wbuttons &= ~KEY_MASK_PRONE;
             BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_STAND, 0, ps);
         }
 
@@ -1048,7 +1043,7 @@ void custom_PM_CheckDuck()
     }
     else
     {
-        bWasProne = (ps->pm_flags & 1);
+        bWasProne = (ps->pm_flags & PMF_PRONE);
 
         (*pm)->mins[0] = ps->mins[0];
         (*pm)->mins[1] = ps->mins[1];
@@ -1069,12 +1064,12 @@ void custom_PM_CheckDuck()
                     else
                     {
                         ps->pm_flags |= 2u;
-                        ps->pm_flags &= ~1u;
+                        ps->pm_flags &= ~PMF_PRONE;
                     }
                 }
                 else
                 {
-                    ps->pm_flags |= 1u;
+                    ps->pm_flags |= PMF_PRONE;
                     ps->pm_flags &= ~2u;
                 }
             }
@@ -1082,14 +1077,14 @@ void custom_PM_CheckDuck()
             {
                 if ((ps->pm_flags & 0x4000) == 0)
                 {
-                    if ((ps->pm_flags & 0x10) && ((*pm)->cmd.wbuttons & 0xC0))
+                    if ((ps->pm_flags & PMF_LADDER) && ((*pm)->cmd.wbuttons & 0xC0))
                     {
                         (*pm)->cmd.wbuttons &= 0x3Fu;
                         BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_STAND, 0, ps);
                     }
                     if ((*pm)->cmd.wbuttons & 0x40)
                     {
-                        if ((ps->pm_flags & 1) || (ps->groundEntityNum != 1023 &&
+                        if ((ps->pm_flags & PMF_PRONE) && (ps->groundEntityNum != 1023 ||
                             BG_CheckProne(
                                 ps->clientNum,
                                 ps->origin,
@@ -1107,7 +1102,7 @@ void custom_PM_CheckDuck()
                                 0,
                                 60.0)))
                         {
-                            ps->pm_flags |= 1u;
+                            ps->pm_flags |= PMF_PRONE;
                             ps->pm_flags &= ~2u;
                         }
                         else if (ps->groundEntityNum != 1023)
@@ -1122,20 +1117,20 @@ void custom_PM_CheckDuck()
                             }
                         }
                     }
-                    else if ((*pm)->cmd.wbuttons & 0x80)
+                    else if ((*pm)->cmd.wbuttons & KEY_MASK_CROUCH)
                     {
-                        if (ps->pm_flags & 1)
+                        if (ps->pm_flags & PMF_PRONE)
                         {
                             (*pm)->maxs[2] = 50.0;
                             (*pm)->trace3(&trace, ps->origin, (*pm)->mins, (*pm)->maxs, ps->origin, ps->clientNum, (*pm)->tracemask & 0xFDFFFFFF);
                             if (trace.allsolid)
                             {
                                 if(((*pm)->cmd.wbuttons & 2) == 0)
-                                    BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_PRONE, 2u, ps);
+                                    BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_PRONE, 0, ps);
                             }
                             else
                             {
-                                ps->pm_flags &= ~1u;
+                                ps->pm_flags &= ~PMF_PRONE;
                                 ps->pm_flags |= 2u;
                             }
                         }
@@ -1144,7 +1139,7 @@ void custom_PM_CheckDuck()
                             ps->pm_flags |= 2u;
                         }
                     }
-                    else if (ps->pm_flags & 1)
+                    else if (ps->pm_flags & PMF_PRONE)
                     {
                         (*pm)->maxs[2] = ps->maxs[2];
                         (*pm)->trace3(&trace, ps->origin, (*pm)->mins, (*pm)->maxs, ps->origin, ps->clientNum, (*pm)->tracemask & 0xFDFFFFFF);
@@ -1154,12 +1149,12 @@ void custom_PM_CheckDuck()
                             (*pm)->trace3(&trace, ps->origin, (*pm)->mins, (*pm)->maxs, ps->origin, ps->clientNum, (*pm)->tracemask & 0xFDFFFFFF);
                             if (trace.allsolid)
                             {
-                                if(((*pm)->cmd.buttons & 2) == 0)
-                                    BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_PRONE, 1u, ps);
+                                if(((*pm)->cmd.wbuttons & 2) == 0)
+                                    BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_PRONE, 0, ps);
                             }
                             else
                             {
-                                ps->pm_flags &= ~1u;
+                                ps->pm_flags &= ~PMF_PRONE;
                                 ps->pm_flags |= 2u;
                             }
                         }
@@ -1174,8 +1169,8 @@ void custom_PM_CheckDuck()
                         (*pm)->trace3(&trace, ps->origin, (*pm)->mins, (*pm)->maxs, ps->origin, ps->clientNum, (*pm)->tracemask & 0xFDFFFFFF);
                         if (trace.allsolid)
                         {
-                            if(((*pm)->cmd.buttons & 2) == 0)
-                                BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_CROUCH, 1u, ps);
+                            if(((*pm)->cmd.wbuttons & 2) == 0)
+                                BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_CROUCH, 0, ps);
                         }
                         else
                         {
@@ -1187,7 +1182,7 @@ void custom_PM_CheckDuck()
 
             if (!ps->viewHeightLerpTime)
             {
-                if (ps->pm_flags & 1)
+                if (ps->pm_flags & PMF_PRONE)
                 {
                     if (ps->viewHeightTarget == ps->standViewHeight)
                     {
@@ -1199,8 +1194,8 @@ void custom_PM_CheckDuck()
                         (*pm)->proneChange = 1;
                         BG_PlayAnim(ps, 0, ANIM_BP_TORSO, 0, 0, 1, 1);
                         // Jump_ActivateSlowdown
-                        ps->pm_flags |= 0x2000u;
-                        ps->pm_time = 1800;
+                        ps->pm_flags |= PMF_JUMPING;
+                        ps->pm_time = JUMP_LAND_SLOWDOWN_TIME;
                     }
                 }
                 else if (ps->viewHeightTarget == ps->crouchMaxZ)
@@ -1224,15 +1219,15 @@ void custom_PM_CheckDuck()
             if (stance == 1)
             {
                 (*pm)->maxs[2] = 30.0;
-                ps->eFlags |= 0x40u;
-                ps->eFlags &= ~0x20u;
+                ps->eFlags |= EF_PRONE;
+                ps->eFlags &= ~EF_CROUCHING;
             }
             else
             {
                 if (stance == 2)
                 {
                     (*pm)->maxs[2] = 50.0;
-                    ps->eFlags |= 0x20u;
+                    ps->eFlags |= EF_CROUCHING;
                     flags = ps->pm_flags & 0xFFFFFFBF;
                 }
                 else
@@ -1243,7 +1238,7 @@ void custom_PM_CheckDuck()
                 ps->pm_flags = flags;
             }
 
-            if ((ps->pm_flags & 1) != 0 && !bWasProne)
+            if ((ps->pm_flags & PMF_PRONE) && !bWasProne)
             {
                 if ((*pm)->cmd.forwardmove || (*pm)->cmd.rightmove)
                 {
@@ -1283,7 +1278,7 @@ void custom_PM_CheckDuck()
         {
             (*pm)->maxs[2] = ps->maxs[2];
             ps->viewHeightTarget = ps->deadViewHeight;
-            if (ps->pm_flags & 1)
+            if (ps->pm_flags & PMF_PRONE)
                 (*pm)->trace = (*pm)->trace2;
             else
                 (*pm)->trace = (*pm)->trace3;
@@ -1292,7 +1287,6 @@ void custom_PM_CheckDuck()
         }
     }
 }
-#endif
 
 vec_t VectorLength(const vec3_t v)
 {
@@ -1571,9 +1565,6 @@ void *custom_Sys_LoadDll(const char *name, char *fqpath, int (**entryPoint)(int,
     PM_SetMovementDir = (PM_SetMovementDir_t)((int)dlsym(libHandle, "_init") + 0xC68F);
     PM_ViewHeightAdjust = (PM_ViewHeightAdjust_t)((int)dlsym(libHandle, "_init") + 0xF8A6);
     PM_ClearAimDownSightFlag = (PM_ClearAimDownSightFlag_t)dlsym(libHandle, "PM_ClearAimDownSightFlag");
-
-
-
     ////
 
     hook_call((int)dlsym(libHandle, "vmMain") + 0xF0, (int)hook_ClientCommand);
