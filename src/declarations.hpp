@@ -427,17 +427,26 @@ typedef struct netField_s
 
 typedef struct trace_s
 {
-    byte gap[0x10];     // pml + 0x38
-    vec3_t normal;      // pml + 0x48
-    int surfaceFlags;   // pml + 0x54
-    byte gap_[16];      // pml + 0x58
+    float fraction;     // 0x0,  pml + 0x38
+    byte gap0x4[0xC];
+    vec3_t normal;      // 0x10, pml + 0x48
+    int surfaceFlags;   // 0x1C, pml + 0x54
+
+    int contents;
+    const char *material;
+    uint16_t entityNum;
+    uint16_t partName;
+    uint16_t partGroup;
+    byte allsolid;
+    byte startsolid;
+    //byte gap2[16];
 } trace_t;
 
 typedef struct usercmd_s
 {
     int serverTime;
-    byte buttons;   // console, chat, ads, attack, use
-    byte wbuttons;  // lean left, lean right, reload
+    byte buttons;               // console, chat, ads, attack, use
+    byte wbuttons;  // pm + 9   // lean left, lean right, reload
     byte weapon;
     byte flags;
     int angles[3];
@@ -572,9 +581,10 @@ typedef struct playerState_s
     int pm_time;            // 0x10
     vec3_t origin;          // [0] = 0x14, [1] = 0x18, [2] = 0x1C
     vec3_t velocity;        // [0] = 0x20, [1] = 0x24, [2] = 0x28
-    vec2_t oldVelocity;     // [0] = 0x2C, [1] = 0x30
-    int weaponTime;         // 0x34
-    int weaponDelay;        // 0x38
+    int weaponTime;         // 0x2c
+    int weaponDelay;        // 0x30
+    int grenadeTimeLeft;    // 0x34
+    int foliageSoundTime;   // 0x38
     int gravity;            // 0x3C
     float leanf;            // 0x40
     int speed;              // 0x44
@@ -617,19 +627,23 @@ typedef struct playerState_s
     unsigned int weaponrechamber[MAX_WEAPONS / (sizeof(int) * 8)]; // 0x31c
     vec3_t mins;                // 0x324
     vec3_t maxs;                // 0x330
-    byte gap_0x33C[0x2C];       // 0x33C
+    float crouchMaxZ;           // 0x33C
+    float crouchViewHeight;     // 0x340
+    float standViewHeight;      // 0x344
+    float deadViewHeight;       // 0x348
+    byte gap_0x34C[0x1C];
     float proneDirection;       // 0x368
     float proneDirectionPitch;  // 0x36c
     float proneTorsoPitch;      // 0x370
     int viewlocked;             // 0x374
     int viewlocked_entNum;      // 0x378
-    byte gap_0x37C[8];          // 0x37C
+    byte gap_0x37C[8];
     int cursorHint;             // 0x384
-    byte gap_0x388[4];          // 0x388
+    byte gap_0x388[4];
     int cursorHintString;       // 0x38c
-    byte gap_0x390[0x28];       // 0x390
+    byte gap_0x390[0x28];
     int cursorHintEntIndex;     // 0x3b8
-    byte gap_0x3BC[4];          // 0x3BC
+    byte gap_0x3BC[4];
     int iCompassFriendInfo;     // 0x3C0
     float fTorsoHeight;         // 0x3c4
     float fTorsoPitch;          // 0x3c8
@@ -815,22 +829,36 @@ typedef struct
     char gametype[MAX_QPATH];
 } server_t;
 
+typedef enum
+{
+    ANIM_BP_UNUSED,
+    ANIM_BP_LEGS,
+    ANIM_BP_TORSO,
+    //...
+} animBodyPart_t;
+
 typedef struct
 {
     playerState_t *ps;  // 0x0
     usercmd_t cmd;      // 0x4
     usercmd_t oldcmd;   // 0x1C
     int tracemask;      // 0x34
-    byte gap_38[4];
+    int debugLevel;     // 0x38
     int numtouch;       // 0x3C
     int touchents[32];  // 0x40
     vec3_t mins;        // 0xC0
     vec3_t maxs;        // 0xCC
-    byte gap_D8[4];
+    byte watertype;     // 0xd8
+    byte waterlevel;    // 0xd9
+    byte gap_DA[2];
     float xyspeed;      // 0xDC
-    byte gap_E0[8];
+    int pmove_fixed;    // 0xE0
+    int pmove_msec;     // 0xE4
     int proneChange;    // 0xE8
-    byte gap_EC[16];
+    void (*trace)(trace_t *, const float *, const float *, const float *, const float *, int, int);     // 0xec
+    void (*trace2)(trace_t *, const float *, const float *, const float *, const float *, int, int);    // 0xF0
+    void (*trace3)(trace_t *, const float *, const float *, const float *, const float *, int, int);    // 0xF4
+    int (*pointcontents)(const vec3_t point, int passEntityNum, int); // 0xF8
 } pmove_t;
 
 struct pml_t

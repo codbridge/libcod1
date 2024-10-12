@@ -24,7 +24,19 @@ static const PbAuthClient_t PbAuthClient = (PbAuthClient_t)0x080c191c;
 typedef void (*Netchan_Setup_t)(netsrc_t src, netchan_t *chan, netadr_t adr, unsigned int qport);
 static const Netchan_Setup_t Netchan_Setup = (Netchan_Setup_t)0x0808346f;
 
+typedef float (*PitchForYawOnNormal_t)(const float fYaw, const vec3_t normal);
+
+typedef float (*AngleDelta_t)(float angle1, float angle2);
+////
+
+//// BG
 typedef void (*BG_AddPredictableEventToPlayerstate_t)(int newEvent, int eventParm, playerState_t *ps);
+typedef int (*BG_CheckProne_t)(
+    int passEntityNum, float const * const vPos, float fSize, float fHeight, float fYaw, float * pfTorsoHeight, float * pfTorsoPitch, float * pfWaistPitch, int bAlreadyProne, int bOnGround, float * const vGroundNormal,
+    void (*)(trace_t*, const float*, const float*, const float*, const float*, int, int),
+    void (*)(trace_t*, const float*, const float*, const float*, const float*, int, int),
+    int proneCheckType, float prone_feet_dist);
+typedef int (*BG_PlayAnim_t)(playerState_s *ps, int animNum, int bodyPart, int forceDuration, qboolean setTimer, qboolean isContinue, qboolean force);
 ////
 
 //// Cmd
@@ -144,6 +156,8 @@ typedef int (*PM_GetEffectiveStance_t)(playerState_t *ps);
 typedef void (*PM_Accelerate_t)(float *wishdir, float wishspeed, float accel);
 typedef void (*PM_StepSlideMove_t)(int gravity);
 typedef void (*PM_SetMovementDir_t)();
+typedef void (*PM_ViewHeightAdjust_t)();
+typedef void (*PM_ClearAimDownSightFlag_t)();
 ////
 
 //// Scr

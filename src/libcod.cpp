@@ -20,12 +20,13 @@ cvar_t *fs_callbacks_additional;
 cvar_t *sv_botHook;
 cvar_t *sv_cracked;
 
-// Game lib objects
+//// Game lib objects
 gentity_t *g_entities;
 pmove_t **pm;
 pml_t *pml;
+////
 
-// Game lib functions
+//// Game lib functions
 ClientCommand_t ClientCommand;
 Scr_IsSystemActive_t Scr_IsSystemActive;
 Scr_GetNumParam_t Scr_GetNumParam;
@@ -49,6 +50,11 @@ Scr_FreeThread_t Scr_FreeThread;
 trap_Argv_t trap_Argv;
 va_t va;
 VectorNormalize_t VectorNormalize;
+BG_AddPredictableEventToPlayerstate_t BG_AddPredictableEventToPlayerstate;
+BG_CheckProne_t BG_CheckProne;
+BG_PlayAnim_t BG_PlayAnim;
+PitchForYawOnNormal_t PitchForYawOnNormal;
+AngleDelta_t AngleDelta;
 PM_CheckJump_t PM_CheckJump;
 PM_AirMove_t PM_AirMove;
 PM_Friction_t PM_Friction;
@@ -58,7 +64,9 @@ PM_GetEffectiveStance_t PM_GetEffectiveStance;
 PM_Accelerate_t PM_Accelerate;
 PM_StepSlideMove_t PM_StepSlideMove;
 PM_SetMovementDir_t PM_SetMovementDir;
-BG_AddPredictableEventToPlayerstate_t BG_AddPredictableEventToPlayerstate;
+PM_ViewHeightAdjust_t PM_ViewHeightAdjust;
+PM_ClearAimDownSightFlag_t PM_ClearAimDownSightFlag;
+////
 
 // Stock callbacks
 int codecallback_startgametype = 0;
@@ -167,7 +175,7 @@ void custom_SV_SendClientGameState(client_t *client)
             MSG_WriteShort(&msg, start);
             MSG_WriteBigString(&msg, sv.configstrings[start]);
 
-            printf("###### sv.configstrings[start] = %s\n", sv.configstrings[start]);
+            //printf("###### sv.configstrings[start] = %s\n", sv.configstrings[start]);
         }
     }
 
@@ -574,7 +582,10 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
     for (i = 0, field = &playerStateFields; i < 0x67; i++, field++)
     {
         fromF = (int *)((byte *)from + field->offset);
-        toF = (int *)((byte *)to + field->offset);
+        if(clientProtocol == 1 && !strcmp(field->name, "deltaTime"))
+            toF = (int *)((byte *)to + (field->offset + 4));
+        else
+            toF = (int *)((byte *)to + field->offset);
 
         if (*fromF != *toF)
             lc = i + 1;
@@ -586,14 +597,10 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
     for (i = 0; i < lc; i++, field++)
     {
         fromF = (int *)((byte *)from + field->offset);
-        if (clientProtocol == 1 && !strcmp(field->name, "deltaTime"))
-        {
+        if(clientProtocol == 1 && !strcmp(field->name, "deltaTime"))
             toF = (int *)((byte *)to + (field->offset + 4));
-        }
         else
-        {
             toF = (int *)((byte *)to + field->offset);
-        }
         
         if (*fromF == *toF)
         {
@@ -624,10 +631,8 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
             {
                 absto = *toF;
                 absbits = field->bits;
-                if (clientProtocol == 1 && !strcmp(field->name, "pm_flags"))
-                {
+                if(clientProtocol == 1 && !strcmp(field->name, "pm_flags"))
                     absbits -= 2;
-                }
                 if (absbits < 0)
                     absbits *= -1;
                 abs3bits = absbits & 7;
@@ -999,13 +1004,24 @@ void hook_ClientCommand(int clientNum)
     Scr_FreeThread(ret);
 }
 
+#if 1
+void Vec3Lerp(const vec3_t start, const vec3_t end, float fraction, vec3_t endpos)
+{
+    endpos[0] = (end[0] - start[0]) * fraction + start[0];
+    endpos[1] = (end[1] - start[1]) * fraction + start[1];
+    endpos[2] = (end[2] - start[2]) * fraction + start[2];
+}
 void custom_PM_CheckDuck()
 {
+    int flags;
+    vec3_t vEnd;
+    float delta;
+    vec3_t vPoint;
     playerState_t *ps;
-    int bWasStanding;
+    int stance;
+    trace_t trace;
     int bWasProne;
-
-
+    
     ps = (*pm)->ps;
     (*pm)->proneChange = 0;
 
@@ -1019,21 +1035,20 @@ void custom_PM_CheckDuck()
         (*pm)->maxs[2] = 16.0;
         ps->pm_flags &= 0xFFFFFFFC;
 
-        if ((*pm)->cmd.buttons & 0x40)
+        if ((*pm)->cmd.wbuttons & 0x40)
         {
-            (*pm)->cmd.buttons &= ~0x40u;
+            (*pm)->cmd.wbuttons &= ~0x40u;
             BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_STAND, 0, ps);
         }
 
-        (*pm)->damagePitch = (*pm)->stats[0];
+        (*pm)->trace = (*pm)->trace3;
         ps->eFlags |= 0x10u;
         ps->viewHeightTarget = 0;
         ps->viewHeightCurrent = 0.0;
     }
     else
     {
-        bWasProne = (ps->pm_flags & 1) != 0;
-        bWasStanding = (ps->pm_flags & 3) == 0;
+        bWasProne = (ps->pm_flags & 1);
 
         (*pm)->mins[0] = ps->mins[0];
         (*pm)->mins[1] = ps->mins[1];
@@ -1041,28 +1056,243 @@ void custom_PM_CheckDuck()
         (*pm)->maxs[1] = ps->maxs[1];
         (*pm)->mins[2] = ps->mins[2];
 
-        if (ps->pm_type <= PM_INTERMISSION)
+        if (ps->pm_type < PM_DEAD)
         {
-            
+            if (ps->eFlags & 0xC000)
+            {
+                if ((ps->eFlags & 0x4000) == 0 || (ps->eFlags & 0x8000))
+                {
+                    if ((ps->eFlags & 0x8000) == 0 || (ps->eFlags & 0x4000))
+                    {
+                        ps->pm_flags &= 0xFFFFFFFC;
+                    }
+                    else
+                    {
+                        ps->pm_flags |= 2u;
+                        ps->pm_flags &= ~1u;
+                    }
+                }
+                else
+                {
+                    ps->pm_flags |= 1u;
+                    ps->pm_flags &= ~2u;
+                }
+            }
+            else
+            {
+                if ((ps->pm_flags & 0x4000) == 0)
+                {
+                    if ((ps->pm_flags & 0x10) && ((*pm)->cmd.wbuttons & 0xC0))
+                    {
+                        (*pm)->cmd.wbuttons &= 0x3Fu;
+                        BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_STAND, 0, ps);
+                    }
+                    if ((*pm)->cmd.wbuttons & 0x40)
+                    {
+                        if ((ps->pm_flags & 1) || (ps->groundEntityNum != 1023 &&
+                            BG_CheckProne(
+                                ps->clientNum,
+                                ps->origin,
+                                (*pm)->maxs[0],
+                                30.0,
+                                ps->viewangles[1],
+                                &ps->fTorsoHeight,
+                                &ps->fTorsoPitch,
+                                &ps->fWaistPitch,
+                                0,
+                                ps->groundEntityNum != 1023,
+                                0,
+                                (*pm)->trace3,
+                                (*pm)->trace2,
+                                0,
+                                60.0)))
+                        {
+                            ps->pm_flags |= 1u;
+                            ps->pm_flags &= ~2u;
+                        }
+                        else if (ps->groundEntityNum != 1023)
+                        {
+                            ps->pm_flags |= 0x8000u;
+                            if (((*pm)->cmd.wbuttons & 2) == 0)
+                            {
+                                if(ps->pm_flags & 2)
+                                    BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_CROUCH, 0, ps);
+                                else
+                                    BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_STAND, 0, ps);
+                            }
+                        }
+                    }
+                    else if ((*pm)->cmd.wbuttons & 0x80)
+                    {
+                        if (ps->pm_flags & 1)
+                        {
+                            (*pm)->maxs[2] = 50.0;
+                            (*pm)->trace3(&trace, ps->origin, (*pm)->mins, (*pm)->maxs, ps->origin, ps->clientNum, (*pm)->tracemask & 0xFDFFFFFF);
+                            if (trace.allsolid)
+                            {
+                                if(((*pm)->cmd.wbuttons & 2) == 0)
+                                    BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_PRONE, 2u, ps);
+                            }
+                            else
+                            {
+                                ps->pm_flags &= ~1u;
+                                ps->pm_flags |= 2u;
+                            }
+                        }
+                        else
+                        {
+                            ps->pm_flags |= 2u;
+                        }
+                    }
+                    else if (ps->pm_flags & 1)
+                    {
+                        (*pm)->maxs[2] = ps->maxs[2];
+                        (*pm)->trace3(&trace, ps->origin, (*pm)->mins, (*pm)->maxs, ps->origin, ps->clientNum, (*pm)->tracemask & 0xFDFFFFFF);
+                        if (trace.allsolid)
+                        {
+                            (*pm)->maxs[2] = 50.0;
+                            (*pm)->trace3(&trace, ps->origin, (*pm)->mins, (*pm)->maxs, ps->origin, ps->clientNum, (*pm)->tracemask & 0xFDFFFFFF);
+                            if (trace.allsolid)
+                            {
+                                if(((*pm)->cmd.buttons & 2) == 0)
+                                    BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_PRONE, 1u, ps);
+                            }
+                            else
+                            {
+                                ps->pm_flags &= ~1u;
+                                ps->pm_flags |= 2u;
+                            }
+                        }
+                        else
+                        {
+                            ps->pm_flags &= 0xFFFFFFFC;
+                        }
+                    }
+                    else if (ps->pm_flags & 2)
+                    {
+                        (*pm)->maxs[2] = ps->maxs[2];
+                        (*pm)->trace3(&trace, ps->origin, (*pm)->mins, (*pm)->maxs, ps->origin, ps->clientNum, (*pm)->tracemask & 0xFDFFFFFF);
+                        if (trace.allsolid)
+                        {
+                            if(((*pm)->cmd.buttons & 2) == 0)
+                                BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_CROUCH, 1u, ps);
+                        }
+                        else
+                        {
+                            ps->pm_flags &= ~2u;
+                        }
+                    }
+                }
+            }
 
+            if (!ps->viewHeightLerpTime)
+            {
+                if (ps->pm_flags & 1)
+                {
+                    if (ps->viewHeightTarget == ps->standViewHeight)
+                    {
+                        ps->viewHeightTarget = ps->crouchViewHeight;
+                    }
+                    else if (ps->viewHeightTarget != ps->crouchMaxZ)
+                    {
+                        ps->viewHeightTarget = ps->crouchMaxZ;
+                        (*pm)->proneChange = 1;
+                        BG_PlayAnim(ps, 0, ANIM_BP_TORSO, 0, 0, 1, 1);
+                        // Jump_ActivateSlowdown
+                        ps->pm_flags |= 0x2000u;
+                        ps->pm_time = 1800;
+                    }
+                }
+                else if (ps->viewHeightTarget == ps->crouchMaxZ)
+                {
+                    ps->viewHeightTarget = ps->crouchViewHeight;
+                    (*pm)->proneChange = 1;
+                    BG_PlayAnim(ps, 0, ANIM_BP_TORSO, 0, 0, 1, 1);
+                }
+                else
+                {
+                    if(ps->pm_flags & 2)
+                        ps->viewHeightTarget = ps->crouchViewHeight;
+                    else
+                        ps->viewHeightTarget = ps->standViewHeight;
+                }
+            }
 
+            PM_ViewHeightAdjust();
+            stance = PM_GetEffectiveStance(ps);
 
+            if (stance == 1)
+            {
+                (*pm)->maxs[2] = 30.0;
+                ps->eFlags |= 0x40u;
+                ps->eFlags &= ~0x20u;
+            }
+            else
+            {
+                if (stance == 2)
+                {
+                    (*pm)->maxs[2] = 50.0;
+                    ps->eFlags |= 0x20u;
+                    flags = ps->pm_flags & 0xFFFFFFBF;
+                }
+                else
+                {
+                    (*pm)->maxs[2] = ps->maxs[2];
+                    flags = ps->pm_flags & 0xFFFFFF9F;
+                }
+                ps->pm_flags = flags;
+            }
 
+            if ((ps->pm_flags & 1) != 0 && !bWasProne)
+            {
+                if ((*pm)->cmd.forwardmove || (*pm)->cmd.rightmove)
+                {
+                    ps->pm_flags &= ~0x400u;
+                    PM_ClearAimDownSightFlag();
+                }
+
+                VectorCopy(ps->origin, vEnd);
+                vEnd[2] = vEnd[2] + 10.0;
+                (*pm)->trace2(&trace, ps->origin, (*pm)->mins, (*pm)->maxs, vEnd, ps->clientNum, (*pm)->tracemask & 0xFDFFFFFF);
+                Vec3Lerp(ps->origin, vEnd, trace.fraction, vEnd);
+                (*pm)->trace2(&trace, vEnd, (*pm)->mins, (*pm)->maxs, ps->origin, ps->clientNum, (*pm)->tracemask & 0xFDFFFFFF);
+                Vec3Lerp(vEnd, ps->origin, trace.fraction, ps->origin);
+                ps->proneDirection = ps->viewangles[1];
+                VectorCopy(ps->origin, vPoint);
+                vPoint[2] = vPoint[2] - 0.25;
+                (*pm)->trace2(&trace, ps->origin, (*pm)->mins, (*pm)->maxs, vPoint, ps->clientNum, (*pm)->tracemask & 0xFDFFFFFF);
+
+                if(trace.startsolid || trace.fraction >= 1.0)
+                    ps->proneDirectionPitch = 0.0;
+                else
+                    ps->proneDirectionPitch = PitchForYawOnNormal(ps->proneDirection, trace.normal);
+
+                delta = AngleDelta(ps->proneDirectionPitch, ps->viewangles[0]);
+                if (delta >= -45.0)
+                {
+                    if(delta <= 45.0)
+                        ps->proneTorsoPitch = ps->proneDirectionPitch;
+                    else
+                        ps->proneTorsoPitch = ps->viewangles[0] + 45.0;
+                }
+                else
+                    ps->proneTorsoPitch = ps->viewangles[0] - 45.0;
+            }
         }
-
-
-
-
-
-
+        else
+        {
+            (*pm)->maxs[2] = ps->maxs[2];
+            ps->viewHeightTarget = ps->deadViewHeight;
+            if (ps->pm_flags & 1)
+                (*pm)->trace = (*pm)->trace2;
+            else
+                (*pm)->trace = (*pm)->trace3;
+            ps->eFlags |= 0x10u;
+            PM_ViewHeightAdjust();
+        }
     }
-
-
-
-
-
-
 }
+#endif
 
 vec_t VectorLength(const vec3_t v)
 {
@@ -1324,8 +1554,12 @@ void *custom_Sys_LoadDll(const char *name, char *fqpath, int (**entryPoint)(int,
     Scr_FreeThread = (Scr_FreeThread_t)dlsym(libHandle, "Scr_FreeThread");
     trap_Argv = (trap_Argv_t)dlsym(libHandle, "trap_Argv");
     va = (va_t)dlsym(libHandle, "va");
-
     VectorNormalize = (VectorNormalize_t)dlsym(libHandle, "VectorNormalize");
+    BG_AddPredictableEventToPlayerstate = (BG_AddPredictableEventToPlayerstate_t)dlsym(libHandle, "BG_AddPredictableEventToPlayerstate");
+    BG_CheckProne = (BG_CheckProne_t)dlsym(libHandle, "BG_CheckProne");
+    BG_PlayAnim = (BG_PlayAnim_t)dlsym(libHandle, "BG_PlayAnim");
+    PitchForYawOnNormal = (PitchForYawOnNormal_t)dlsym(libHandle, "PitchForYawOnNormal");
+    AngleDelta = (AngleDelta_t)dlsym(libHandle, "AngleDelta");
     PM_CheckJump = (PM_CheckJump_t)((int)dlsym(libHandle, "_init") + 0xCB85);
     PM_AirMove = (PM_AirMove_t)((int)dlsym(libHandle, "_init") + 0xD08D);
     PM_Friction = (PM_Friction_t)((int)dlsym(libHandle, "_init") + 0xBCB3);
@@ -1335,16 +1569,22 @@ void *custom_Sys_LoadDll(const char *name, char *fqpath, int (**entryPoint)(int,
     PM_Accelerate = (PM_Accelerate_t)((int)dlsym(libHandle, "_init") + 0xBF62);
     PM_StepSlideMove = (PM_StepSlideMove_t)dlsym(libHandle, "PM_StepSlideMove");
     PM_SetMovementDir = (PM_SetMovementDir_t)((int)dlsym(libHandle, "_init") + 0xC68F);
-    BG_AddPredictableEventToPlayerstate = (BG_AddPredictableEventToPlayerstate_t)dlsym(libHandle, "BG_AddPredictableEventToPlayerstate");
+    PM_ViewHeightAdjust = (PM_ViewHeightAdjust_t)((int)dlsym(libHandle, "_init") + 0xF8A6);
+    PM_ClearAimDownSightFlag = (PM_ClearAimDownSightFlag_t)dlsym(libHandle, "PM_ClearAimDownSightFlag");
+
+
 
     ////
 
     hook_call((int)dlsym(libHandle, "vmMain") + 0xF0, (int)hook_ClientCommand);
-
+#if 0
     hook_jmp((int)dlsym(libHandle, "_init") + 0xD23D, (int)custom_PM_WalkMove);
     hook_jmp((int)dlsym(libHandle, "_init") + 0xBBF1, (int)custom_PM_GetReducedFriction);
     hook_jmp((int)dlsym(libHandle, "_init") + 0xBC52, (int)custom_PM_GetLandFactor);
+#endif
+#if 1
     hook_jmp((int)dlsym(libHandle, "_init") + 0x104C4, (int)custom_PM_CheckDuck);
+#endif
 
     hook_GScr_LoadGameTypeScript = new cHook((int)dlsym(libHandle, "GScr_LoadGameTypeScript"), (int)custom_GScr_LoadGameTypeScript);
     hook_GScr_LoadGameTypeScript->hook();
@@ -1386,10 +1626,10 @@ class libcod
         hook_jmp(0x08089e7e, (int)custom_SV_DirectConnect);
         hook_jmp(0x08097c2f, (int)custom_SV_SendClientSnapshot);
         hook_jmp(0x08081dd3, (int)custom_MSG_WriteDeltaPlayerstate);
-#if 1
+#if 0
         hook_jmp(0x08082640, (int)custom_MSG_ReadDeltaPlayerstate);
 #endif
-#if 1
+#if 0
         hook_jmp(0x0808ae44, (int)custom_SV_SendClientGameState);
 #endif
 
