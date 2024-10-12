@@ -1072,12 +1072,12 @@ void custom_PM_CheckDuck()
         {
             if (ps->eFlags & 0xC000)
             {
-                if ((ps->eFlags & 0x4000) && ps->pm_flags >= 0)
+                if ((ps->eFlags & 0x4000) && ps->eFlags >= 0)
                 {
                     ps->pm_flags |= PMF_PRONE;
                     ps->pm_flags &= ~2u;
                 }
-                else if (ps->pm_flags >= 0 || (ps->eFlags & 0x4000))
+                else if (ps->eFlags >= 0 || (ps->eFlags & 0x4000))
                 {
                     ps->pm_flags &= 0xFFFFFFFC;
                 }
@@ -1265,14 +1265,14 @@ void custom_PM_CheckDuck()
                 {
                     (*pm)->maxs[2] = 50.0;
                     ps->eFlags |= EF_CROUCHING;
-                    flags = ps->pm_flags & 0xFFFFFFBF;
+                    flags = ps->eFlags & 0xFFFFFFBF;
                 }
                 else
                 {
                     (*pm)->maxs[2] = ps->maxs[2];
-                    flags = ps->pm_flags & 0xFFFFFF9F;
+                    flags = ps->eFlags & 0xFFFFFF9F;
                 }
-                ps->pm_flags = flags;
+                ps->eFlags = flags;
             }
 
             if (ps->pm_flags & PMF_PRONE)

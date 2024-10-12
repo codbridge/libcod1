@@ -33,11 +33,11 @@
 #define MAX_HUDELEMS_ARCHIVAL       MAX_HUDELEMENTS
 #define MAX_HUDELEMS_CURRENT        MAX_HUDELEMENTS
 
-#define CVAR_NOFLAG         0               // 0x0000
-#define CVAR_ARCHIVE        (1 << 0)        // 0x0001
-#define CVAR_SERVERINFO     (1 << 2)        // 0x0004
-#define CVAR_SYSTEMINFO     (1 << 3)        // 0x0008
-#define CVAR_CHEAT          (1 << 9)        // 0x0200
+#define CVAR_NOFLAG         0           // 0x0000
+#define CVAR_ARCHIVE        (1 << 0)    // 0x0001
+#define CVAR_SERVERINFO     (1 << 2)    // 0x0004
+#define CVAR_SYSTEMINFO     (1 << 3)    // 0x0008
+#define CVAR_CHEAT          (1 << 9)    // 0x0200
 
 #define KEY_MASK_NONE           0
 #define KEY_MASK_FORWARD        127
@@ -223,206 +223,9 @@ typedef struct scr_method_s
 
 typedef enum
 {
-    EV_NONE,
-    EV_FOOTSTEP_RUN_DEFAULT,
-    EV_FOOTSTEP_RUN_BARK,
-    EV_FOOTSTEP_RUN_BRICK,
-    EV_FOOTSTEP_RUN_CARPET,
-    EV_FOOTSTEP_RUN_CLOTH,
-    EV_FOOTSTEP_RUN_CONCRETE,
-    EV_FOOTSTEP_RUN_DIRT,
-    EV_FOOTSTEP_RUN_FLESH,
-    EV_FOOTSTEP_RUN_FOLIAGE,
-    EV_FOOTSTEP_RUN_GLASS,
-    EV_FOOTSTEP_RUN_GRASS,
-    EV_FOOTSTEP_RUN_GRAVEL,
-    EV_FOOTSTEP_RUN_ICE,
-    EV_FOOTSTEP_RUN_METAL,
-    EV_FOOTSTEP_RUN_MUD,
-    EV_FOOTSTEP_RUN_PAPER,
-    EV_FOOTSTEP_RUN_PLASTER,
-    EV_FOOTSTEP_RUN_ROCK,
-    EV_FOOTSTEP_RUN_SAND,
-    EV_FOOTSTEP_RUN_SNOW,
-    EV_FOOTSTEP_RUN_WATER,
-    EV_FOOTSTEP_RUN_WOOD,
-    EV_FOOTSTEP_RUN_ASPHALT,
-    EV_FOOTSTEP_WALK_DEFAULT,
-    EV_FOOTSTEP_WALK_BARK,
-    EV_FOOTSTEP_WALK_BRICK,
-    EV_FOOTSTEP_WALK_CARPET,
-    EV_FOOTSTEP_WALK_CLOTH,
-    EV_FOOTSTEP_WALK_CONCRETE,
-    EV_FOOTSTEP_WALK_DIRT,
-    EV_FOOTSTEP_WALK_FLESH,
-    EV_FOOTSTEP_WALK_FOLIAGE,
-    EV_FOOTSTEP_WALK_GLASS,
-    EV_FOOTSTEP_WALK_GRASS,
-    EV_FOOTSTEP_WALK_GRAVEL,
-    EV_FOOTSTEP_WALK_ICE,
-    EV_FOOTSTEP_WALK_METAL,
-    EV_FOOTSTEP_WALK_MUD,
-    EV_FOOTSTEP_WALK_PAPER,
-    EV_FOOTSTEP_WALK_PLASTER,
-    EV_FOOTSTEP_WALK_ROCK,
-    EV_FOOTSTEP_WALK_SAND,
-    EV_FOOTSTEP_WALK_SNOW,
-    EV_FOOTSTEP_WALK_WATER,
-    EV_FOOTSTEP_WALK_WOOD,
-    EV_FOOTSTEP_WALK_ASPHALT,
-    EV_FOOTSTEP_PRONE_DEFAULT,
-    EV_FOOTSTEP_PRONE_BARK,
-    EV_FOOTSTEP_PRONE_BRICK,
-    EV_FOOTSTEP_PRONE_CARPET,
-    EV_FOOTSTEP_PRONE_CLOTH,
-    EV_FOOTSTEP_PRONE_CONCRETE,
-    EV_FOOTSTEP_PRONE_DIRT,
-    EV_FOOTSTEP_PRONE_FLESH,
-    EV_FOOTSTEP_PRONE_FOLIAGE,
-    EV_FOOTSTEP_PRONE_GLASS,
-    EV_FOOTSTEP_PRONE_GRASS,
-    EV_FOOTSTEP_PRONE_GRAVEL,
-    EV_FOOTSTEP_PRONE_ICE,
-    EV_FOOTSTEP_PRONE_METAL,
-    EV_FOOTSTEP_PRONE_MUD,
-    EV_FOOTSTEP_PRONE_PAPER,
-    EV_FOOTSTEP_PRONE_PLASTER,
-    EV_FOOTSTEP_PRONE_ROCK,
-    EV_FOOTSTEP_PRONE_SAND,
-    EV_FOOTSTEP_PRONE_SNOW,
-    EV_FOOTSTEP_PRONE_WATER,
-    EV_FOOTSTEP_PRONE_WOOD,
-    EV_FOOTSTEP_PRONE_ASPHALT,
-    EV_JUMP_DEFAULT,
-    EV_JUMP_BARK,
-    EV_JUMP_BRICK,
-    EV_JUMP_CARPET,
-    EV_JUMP_CLOTH,
-    EV_JUMP_CONCRETE,
-    EV_JUMP_DIRT,
-    EV_JUMP_FLESH,
-    EV_JUMP_FOLIAGE,
-    EV_JUMP_GLASS,
-    EV_JUMP_GRASS,
-    EV_JUMP_GRAVEL,
-    EV_JUMP_ICE,
-    EV_JUMP_METAL,
-    EV_JUMP_MUD,
-    EV_JUMP_PAPER,
-    EV_JUMP_PLASTER,
-    EV_JUMP_ROCK,
-    EV_JUMP_SAND,
-    EV_JUMP_SNOW,
-    EV_JUMP_WATER,
-    EV_JUMP_WOOD,
-    EV_JUMP_ASPHALT,
-    EV_LANDING_DEFAULT,
-    EV_LANDING_BARK,
-    EV_LANDING_BRICK,
-    EV_LANDING_CARPET,
-    EV_LANDING_CLOTH,
-    EV_LANDING_CONCRETE,
-    EV_LANDING_DIRT,
-    EV_LANDING_FLESH,
-    EV_LANDING_FOLIAGE,
-    EV_LANDING_GLASS,
-    EV_LANDING_GRASS,
-    EV_LANDING_GRAVEL,
-    EV_LANDING_ICE,
-    EV_LANDING_METAL,
-    EV_LANDING_MUD,
-    EV_LANDING_PAPER,
-    EV_LANDING_PLASTER,
-    EV_LANDING_ROCK,
-    EV_LANDING_SAND,
-    EV_LANDING_SNOW,
-    EV_LANDING_WATER,
-    EV_LANDING_WOOD,
-    EV_LANDING_ASPHALT,
-    EV_LANDING_PAIN_DEFAULT,
-    EV_LANDING_PAIN_BARK,
-    EV_LANDING_PAIN_BRICK,
-    EV_LANDING_PAIN_CARPET,
-    EV_LANDING_PAIN_CLOTH,
-    EV_LANDING_PAIN_CONCRETE,
-    EV_LANDING_PAIN_DIRT,
-    EV_LANDING_PAIN_FLESH,
-    EV_LANDING_PAIN_FOLIAGE,
-    EV_LANDING_PAIN_GLASS,
-    EV_LANDING_PAIN_GRASS,
-    EV_LANDING_PAIN_GRAVEL,
-    EV_LANDING_PAIN_ICE,
-    EV_LANDING_PAIN_METAL,
-    EV_LANDING_PAIN_MUD,
-    EV_LANDING_PAIN_PAPER,
-    EV_LANDING_PAIN_PLASTER,
-    EV_LANDING_PAIN_ROCK,
-    EV_LANDING_PAIN_SAND,
-    EV_LANDING_PAIN_SNOW,
-    EV_LANDING_PAIN_WATER,
-    EV_LANDING_PAIN_WOOD,
-    EV_LANDING_PAIN_ASPHALT,
-    EV_FOLIAGE_SOUND,
-    EV_STANCE_FORCE_STAND,
-    EV_STANCE_FORCE_CROUCH,
-    EV_STANCE_FORCE_PRONE,
-    EV_STEP_VIEW,
-    EV_WATER_TOUCH,
-    EV_WATER_LEAVE,
-    EV_ITEM_PICKUP,
-    EV_ITEM_PICKUP_QUIET,
-    EV_AMMO_PICKUP,
-    EV_NOAMMO,
-    EV_EMPTYCLIP,
-    EV_RELOAD,
-    EV_RELOAD_FROM_EMPTY,
-    EV_RELOAD_START,
-    EV_RELOAD_END,
-    EV_RAISE_WEAPON,
-    EV_PUTAWAY_WEAPON,
-    EV_WEAPON_ALT,
-    EV_PULLBACK_WEAPON,
-    EV_FIRE_WEAPON,
-    EV_FIRE_WEAPONB,
-    EV_FIRE_WEAPON_LASTSHOT,
-    EV_RECHAMBER_WEAPON,
-    EV_EJECT_BRASS,
-    EV_MELEE_SWIPE,
-    EV_FIRE_MELEE,
-    EV_MELEE_HIT,
-    EV_MELEE_MISS,
-    EV_FIRE_WEAPON_MG42,
-    EV_FIRE_QUADBARREL_1,
-    EV_FIRE_QUADBARREL_2,
-    EV_BULLET_TRACER,
-    EV_SOUND_ALIAS,
-    EV_BULLET_HIT_SMALL,
-    EV_BULLET_HIT_LARGE,
-    EV_BULLET_HIT_CLIENT_SMALL,
-    EV_BULLET_HIT_CLIENT_LARGE,
-    EV_GRENADE_BOUNCE,
-    EV_GRENADE_EXPLODE,
-    EV_ROCKET_EXPLODE,
-    EV_ROCKET_EXPLODE_NOMARKS,
-    EV_CUSTOM_EXPLODE,
-    EV_CUSTOM_EXPLODE_NOMARKS,
-    EV_RAILTRAIL,
-    EV_BULLET,
-    EV_PAIN,
-    EV_CROUCH_PAIN,
-    EV_DEATH,
-    EV_DEBUG_LINE,
-    EV_PLAY_FX,
-    EV_PLAY_FX_DIR,
-    EV_PLAY_FX_ON_TAG,
-    EV_FLAMEBARREL_BOUNCE,
-    EV_EARTHQUAKE,
-    EV_DROPWEAPON,
-    EV_ITEM_RESPAWN,
-    EV_ITEM_POP,
-    EV_PLAYER_TELEPORT_IN,
-    EV_PLAYER_TELEPORT_OUT,
-    EV_OBITUARY
+    EV_STANCE_FORCE_STAND = 140,
+    EV_STANCE_FORCE_CROUCH = 141,
+    EV_STANCE_FORCE_PRONE = 142
 } entity_event_t;
 
 typedef struct netField_s
@@ -448,16 +251,16 @@ typedef struct trace_s
 
 typedef struct usercmd_s
 {
-    int serverTime;
-    byte buttons;               // console, chat, ads, attack, use
-    byte wbuttons;  // pm + 9   // lean left, lean right, reload
-    byte weapon;
-    byte flags;
-    int angles[3];
-    signed char forwardmove;
-    signed char rightmove;
-    signed char upmove;
-    byte unknown;
+    int serverTime; // 0x0
+    byte buttons;   // 0x4      // console, chat, ads, attack, use
+    byte wbuttons;  // 0x5      // lean left, lean right, reload
+    byte weapon;    // 0x6
+    byte gap0x7;
+    int angles[3];  // 0x8
+    signed char forwardmove;    // 0x14
+    signed char rightmove;      // 0x15
+    signed char upmove;         // 0x16
+    byte gap0x17;
 } usercmd_t;
 
 typedef void netProfileInfo_t;
@@ -820,7 +623,7 @@ typedef struct
     int start_frameTime;
     int	checksumFeed;
     int timeResidual;
-    byte gap_836B834[0x404];
+    byte gap_0x836B834[0x404];
     char *configstrings[MAX_CONFIGSTRINGS];
     svEntity_t svEntities[MAX_GENTITIES];
     char *entityParsePoint;
@@ -829,7 +632,7 @@ typedef struct
     int	num_entities;
     playerState_t *gameClients;
     int gameClientSize;
-    byte gap_83CCC50[0xBC];
+    byte gap_0x83CCC50[0xBC];
     char gametype[MAX_QPATH];
 } server_t;
 
@@ -859,9 +662,9 @@ typedef struct
     int pmove_fixed;    // 0xE0
     int pmove_msec;     // 0xE4
     int proneChange;    // 0xE8
-    void (*trace)(trace_t *, const float *, const float *, const float *, const float *, int, int);     // 0xec
-    void (*trace2)(trace_t *, const float *, const float *, const float *, const float *, int, int);    // 0xF0
-    void (*trace3)(trace_t *, const float *, const float *, const float *, const float *, int, int);    // 0xF4
+    void (*trace)(trace_t *, const vec3_t, const vec3_t, const vec3_t, const vec3_t, int, int);     // 0xec
+    void (*trace2)(trace_t *, const vec3_t, const vec3_t, const vec3_t, const vec3_t, int, int);    // 0xF0
+    void (*trace3)(trace_t *, const vec3_t, const vec3_t, const vec3_t, const vec3_t, int, int);    // 0xF4
     int (*pointcontents)(const vec3_t point, int passEntityNum, int); // 0xF8
 } pmove_t;
 
