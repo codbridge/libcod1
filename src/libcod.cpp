@@ -6,6 +6,7 @@
 // Stock cvars
 cvar_t *com_timescale;
 cvar_t *fs_game;
+cvar_t *g_debugProneCheck;
 cvar_t *sv_maxclients;
 cvar_t *sv_maxPing;
 cvar_t *sv_minPing;
@@ -107,6 +108,7 @@ void custom_Com_Init(char *commandLine)
     // Get references to stock cvars
     com_timescale = Cvar_FindVar("timescale");
     fs_game = Cvar_FindVar("fs_game");
+    g_debugProneCheck = Cvar_FindVar("g_debugProneCheck");
     sv_maxclients = Cvar_FindVar("sv_maxclients");
     sv_maxPing = Cvar_FindVar("sv_maxPing");
     sv_minPing = Cvar_FindVar("sv_minPing");
@@ -1051,26 +1053,38 @@ void custom_PM_CheckDuck()
         (*pm)->maxs[1] = ps->maxs[1];
         (*pm)->mins[2] = ps->mins[2];
 
+        if (ps->pm_type > PM_INTERMISSION)
+        {
+            (*pm)->maxs[2] = ps->maxs[2];
+            ps->viewHeightTarget = ps->deadViewHeight;
+            
+            if(ps->pm_flags & PMF_PRONE)
+                (*pm)->trace = (*pm)->trace2;
+            else
+                (*pm)->trace = (*pm)->trace3;
+
+            ps->eFlags |= 0x10u;
+            PM_ViewHeightAdjust();
+            return;
+        }
+
         if (ps->pm_type < PM_DEAD)
         {
             if (ps->eFlags & 0xC000)
             {
-                if ((ps->eFlags & 0x4000) == 0 || (ps->eFlags & 0x8000))
-                {
-                    if ((ps->eFlags & 0x8000) == 0 || (ps->eFlags & 0x4000))
-                    {
-                        ps->pm_flags &= 0xFFFFFFFC;
-                    }
-                    else
-                    {
-                        ps->pm_flags |= 2u;
-                        ps->pm_flags &= ~PMF_PRONE;
-                    }
-                }
-                else
+                if ((ps->eFlags & 0x4000) && ps->eFlags >= 0)
                 {
                     ps->pm_flags |= PMF_PRONE;
                     ps->pm_flags &= ~2u;
+                }
+                else if (ps->eFlags >= 0 || (ps->eFlags & 0x4000))
+                {
+                    ps->pm_flags &= 0xFFFFFFFC;
+                }
+                else
+                {
+                    ps->pm_flags |= 2u;
+                    ps->pm_flags &= ~PMF_PRONE;                    
                 }
             }
             else
@@ -1084,8 +1098,9 @@ void custom_PM_CheckDuck()
                     }
                     if ((*pm)->cmd.wbuttons & 0x40)
                     {
-                        if ((ps->pm_flags & PMF_PRONE) && (ps->groundEntityNum != 1023 ||
-                            BG_CheckProne(
+                        if ((ps->pm_flags & PMF_PRONE)
+                            || (ps->groundEntityNum != 1023
+                            && BG_CheckProne(
                                 ps->clientNum,
                                 ps->origin,
                                 (*pm)->maxs[0],
@@ -1125,7 +1140,7 @@ void custom_PM_CheckDuck()
                             (*pm)->trace3(&trace, ps->origin, (*pm)->mins, (*pm)->maxs, ps->origin, ps->clientNum, (*pm)->tracemask & 0xFDFFFFFF);
                             if (trace.allsolid)
                             {
-                                if(((*pm)->cmd.wbuttons & 2) == 0)
+                                if((*pm)->cmd.wbuttons & 2)
                                     BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_PRONE, 0, ps);
                             }
                             else
@@ -1149,7 +1164,7 @@ void custom_PM_CheckDuck()
                             (*pm)->trace3(&trace, ps->origin, (*pm)->mins, (*pm)->maxs, ps->origin, ps->clientNum, (*pm)->tracemask & 0xFDFFFFFF);
                             if (trace.allsolid)
                             {
-                                if(((*pm)->cmd.wbuttons & 2) == 0)
+                                if((*pm)->cmd.wbuttons & 2)
                                     BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_PRONE, 0, ps);
                             }
                             else
@@ -1188,14 +1203,36 @@ void custom_PM_CheckDuck()
                     {
                         ps->viewHeightTarget = ps->crouchViewHeight;
                     }
-                    else if (ps->viewHeightTarget != ps->crouchMaxZ)
+                    else
                     {
-                        ps->viewHeightTarget = ps->crouchMaxZ;
-                        (*pm)->proneChange = 1;
-                        BG_PlayAnim(ps, 0, ANIM_BP_TORSO, 0, 0, 1, 1);
-                        // Jump_ActivateSlowdown
-                        ps->pm_flags |= PMF_JUMPING;
-                        ps->pm_time = JUMP_LAND_SLOWDOWN_TIME;
+                        if (g_debugProneCheck->integer == 2)
+                        {
+                            BG_CheckProne(
+                                ps->clientNum,
+                                ps->origin,
+                                (*pm)->maxs[0],
+                                30.0,
+                                ps->viewangles[1],
+                                0,
+                                0,
+                                0,
+                                0,
+                                ps->groundEntityNum != 1023,
+                                0,
+                                (*pm)->trace3,
+                                (*pm)->trace2,
+                                0,
+                                60.0);
+                        }
+                        if (ps->viewHeightTarget != ps->crouchMaxZ)
+                        {
+                            ps->viewHeightTarget = ps->crouchMaxZ;
+                            (*pm)->proneChange = 1;
+                            BG_PlayAnim(ps, 0, ANIM_BP_TORSO, 0, 0, 1, 1);
+                            // Jump_ActivateSlowdown
+                            ps->pm_flags |= PMF_JUMPING;
+                            ps->pm_time = JUMP_LAND_SLOWDOWN_TIME;
+                        }
                     }
                 }
                 else if (ps->viewHeightTarget == ps->crouchMaxZ)
@@ -1238,52 +1275,52 @@ void custom_PM_CheckDuck()
                 ps->pm_flags = flags;
             }
 
-            if ((ps->pm_flags & PMF_PRONE) && !bWasProne)
-            {
-                if ((*pm)->cmd.forwardmove || (*pm)->cmd.rightmove)
-                {
-                    ps->pm_flags &= ~0x400u;
-                    PM_ClearAimDownSightFlag();
-                }
-
-                VectorCopy(ps->origin, vEnd);
-                vEnd[2] = vEnd[2] + 10.0;
-                (*pm)->trace2(&trace, ps->origin, (*pm)->mins, (*pm)->maxs, vEnd, ps->clientNum, (*pm)->tracemask & 0xFDFFFFFF);
-                Vec3Lerp(ps->origin, vEnd, trace.fraction, vEnd);
-                (*pm)->trace2(&trace, vEnd, (*pm)->mins, (*pm)->maxs, ps->origin, ps->clientNum, (*pm)->tracemask & 0xFDFFFFFF);
-                Vec3Lerp(vEnd, ps->origin, trace.fraction, ps->origin);
-                ps->proneDirection = ps->viewangles[1];
-                VectorCopy(ps->origin, vPoint);
-                vPoint[2] = vPoint[2] - 0.25;
-                (*pm)->trace2(&trace, ps->origin, (*pm)->mins, (*pm)->maxs, vPoint, ps->clientNum, (*pm)->tracemask & 0xFDFFFFFF);
-
-                if(trace.startsolid || trace.fraction >= 1.0)
-                    ps->proneDirectionPitch = 0.0;
-                else
-                    ps->proneDirectionPitch = PitchForYawOnNormal(ps->proneDirection, trace.normal);
-
-                delta = AngleDelta(ps->proneDirectionPitch, ps->viewangles[0]);
-                if (delta >= -45.0)
-                {
-                    if(delta <= 45.0)
-                        ps->proneTorsoPitch = ps->proneDirectionPitch;
-                    else
-                        ps->proneTorsoPitch = ps->viewangles[0] + 45.0;
-                }
-                else
-                    ps->proneTorsoPitch = ps->viewangles[0] - 45.0;
-            }
-        }
-        else
-        {
-            (*pm)->maxs[2] = ps->maxs[2];
-            ps->viewHeightTarget = ps->deadViewHeight;
             if (ps->pm_flags & PMF_PRONE)
+            {
                 (*pm)->trace = (*pm)->trace2;
+                ps->eFlags |= 0x10u;
+
+                if (!bWasProne)
+                {
+                    if ((*pm)->cmd.forwardmove || (*pm)->cmd.rightmove)
+                    {
+                        ps->pm_flags &= ~0x400u;
+                        PM_ClearAimDownSightFlag();
+                    }
+
+                    VectorCopy(ps->origin, vEnd);
+                    vEnd[2] = vEnd[2] + 10.0;
+                    (*pm)->trace2(&trace, ps->origin, (*pm)->mins, (*pm)->maxs, vEnd, ps->clientNum, (*pm)->tracemask & 0xFDFFFFFF);
+                    Vec3Lerp(ps->origin, vEnd, trace.fraction, vEnd);
+                    (*pm)->trace2(&trace, vEnd, (*pm)->mins, (*pm)->maxs, ps->origin, ps->clientNum, (*pm)->tracemask & 0xFDFFFFFF);
+                    Vec3Lerp(vEnd, ps->origin, trace.fraction, ps->origin);
+                    ps->proneDirection = ps->viewangles[1];
+                    VectorCopy(ps->origin, vPoint);
+                    vPoint[2] = vPoint[2] - 0.25;
+                    (*pm)->trace2(&trace, ps->origin, (*pm)->mins, (*pm)->maxs, vPoint, ps->clientNum, (*pm)->tracemask & 0xFDFFFFFF);
+
+                    if(trace.startsolid || trace.fraction >= 1.0)
+                        ps->proneDirectionPitch = 0.0;
+                    else
+                        ps->proneDirectionPitch = PitchForYawOnNormal(ps->proneDirection, trace.normal);
+
+                    delta = AngleDelta(ps->proneDirectionPitch, ps->viewangles[0]);
+                    if (delta >= -45.0)
+                    {
+                        if(delta <= 45.0)
+                            ps->proneTorsoPitch = ps->proneDirectionPitch;
+                        else
+                            ps->proneTorsoPitch = ps->viewangles[0] + 45.0;
+                    }
+                    else
+                        ps->proneTorsoPitch = ps->viewangles[0] - 45.0;
+                }
+            }
             else
+            {
                 (*pm)->trace = (*pm)->trace3;
-            ps->eFlags |= 0x10u;
-            PM_ViewHeightAdjust();
+                ps->eFlags |= 0x10u;
+            }
         }
     }
 }
