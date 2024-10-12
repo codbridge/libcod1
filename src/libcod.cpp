@@ -1072,12 +1072,12 @@ void custom_PM_CheckDuck()
         {
             if (ps->eFlags & 0xC000)
             {
-                if ((ps->eFlags & 0x4000) && ps->eFlags >= 0)
+                if ((ps->eFlags & 0x4000) && ps->pm_flags >= 0)
                 {
                     ps->pm_flags |= PMF_PRONE;
                     ps->pm_flags &= ~2u;
                 }
-                else if (ps->eFlags >= 0 || (ps->eFlags & 0x4000))
+                else if (ps->pm_flags >= 0 || (ps->eFlags & 0x4000))
                 {
                     ps->pm_flags &= 0xFFFFFFFC;
                 }
@@ -1096,7 +1096,7 @@ void custom_PM_CheckDuck()
                         (*pm)->cmd.wbuttons &= 0x3Fu;
                         BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_STAND, 0, ps);
                     }
-                    if ((*pm)->cmd.wbuttons & 0x40)
+                    if ((*pm)->cmd.wbuttons & KEY_MASK_PRONE)
                     {
                         if ((ps->pm_flags & PMF_PRONE)
                             || (ps->groundEntityNum != 1023
@@ -1194,7 +1194,7 @@ void custom_PM_CheckDuck()
                     }
                 }
             }
-
+            
             if (!ps->viewHeightLerpTime)
             {
                 if (ps->pm_flags & PMF_PRONE)
@@ -1205,7 +1205,7 @@ void custom_PM_CheckDuck()
                     }
                     else
                     {
-                        if (g_debugProneCheck->integer == 2)
+                        if (g_debugProneCheck && g_debugProneCheck->integer == 2)
                         {
                             BG_CheckProne(
                                 ps->clientNum,

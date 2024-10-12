@@ -434,19 +434,16 @@ typedef struct netField_s
 
 typedef struct trace_s
 {
-    float fraction;     // 0x0,  pml + 0x38
-    byte gap0x4[0xC];
-    vec3_t normal;      // 0x10, pml + 0x48
-    int surfaceFlags;   // 0x1C, pml + 0x54
-
-    int contents;
-    const char *material;
-    uint16_t entityNum;
-    uint16_t partName;
-    uint16_t partGroup;
-    byte allsolid;
-    byte startsolid;
-    //byte gap2[16];
+    float fraction;     // 0x0
+    vec3_t endpos;      // 0x4
+    vec3_t normal;      // 0x10
+    int surfaceFlags;   // 0x1C
+    byte gap0x20[8];
+    uint16_t entityNum; // 0x28
+    uint16_t partName;  // 0x2A
+    byte gap0x2C[2];
+    byte allsolid;      // 0x2E
+    byte startsolid;    // 0x2F
 } trace_t;
 
 typedef struct usercmd_s
