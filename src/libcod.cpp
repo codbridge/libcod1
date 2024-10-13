@@ -1047,21 +1047,36 @@ void custom_PM_CheckDuck()
         {
             if (((*pm)->ps->eFlags & 0xC000) == 0)
             {
+                //printf("##### & 0xC000) == 0\n");
+
                 if (((*pm)->ps->pm_flags & 0x4000) == 0)
                 {
+                    //printf("##### & 0x4000) == 0\n");
+
                     if ((((*pm)->ps->pm_flags & PMF_LADDER) != 0) && (((*pm)->cmd.wbuttons & 0xC0) != 0))
                     {
+                        //printf("#####  & PMF_LADDER) != 0) && 0xC0) != 0\n");
+                        // here = press crouch or prone when on ladder
+
                         (*pm)->cmd.wbuttons &= 0x3f;
                         BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_STAND, 0, (*pm)->ps);
                     }
                     if (((*pm)->cmd.wbuttons & KEY_MASK_PRONE) == 0)
                     {
+                        //printf("##### & KEY_MASK_PRONE) == 0\n");
+                        // here = not proned
                         if (((*pm)->cmd.wbuttons & KEY_MASK_CROUCH) == 0)
                         {
+                            //printf("##### & KEY_MASK_CROUCH) == 0\n");
+                            // here = not proned, not crouched
                             if (((*pm)->ps->pm_flags & PMF_PRONE) == 0)
                             {
+                                //printf("##### & PMF_PRONE) == 0\n");
+                                // here = standing or in air
                                 if (((*pm)->ps->pm_flags & 2) != 0)
                                 {
+                                    printf("##### pm_flags & 2) != 0\n");
+                                    // here = crouch/prone, then stand
                                     (*pm)->maxs[2] = (*pm)->ps->maxs[2];
                                     (*pm)->trace3(
                                         &trace,
@@ -1073,7 +1088,7 @@ void custom_PM_CheckDuck()
                                         (*pm)->tracemask & 0xfdffffff);
                                     if (trace.allsolid == 0)
                                     {
-                                        (*pm)->ps->pm_flags &= ~0xfffffffd; 
+                                        (*pm)->ps->pm_flags &= ~2u; // using ida value or ads gets messed up (standing)
                                     }
                                     else if(((*pm)->cmd.wbuttons & 2) == 0)
                                     {
@@ -1083,6 +1098,9 @@ void custom_PM_CheckDuck()
                             }
                             else
                             {
+                                printf("##### PMF_PRONE\n");
+                                // here = being standing when did stand up while moving when being proned
+
                                 (*pm)->maxs[2] = (*pm)->ps->maxs[2];
                                 (*pm)->trace3(
                                     &trace,
@@ -1094,7 +1112,7 @@ void custom_PM_CheckDuck()
                                     (*pm)->tracemask & 0xfdffffff);
                                 if (trace.allsolid == 0)
                                 {
-                                    (*pm)->ps->pm_flags &= ~0xfffffffc;
+                                    (*pm)->ps->pm_flags &= ~2u;//&= ~0xfffffffc;
                                 }
                                 else
                                 {
@@ -1109,7 +1127,7 @@ void custom_PM_CheckDuck()
                                         (*pm)->tracemask & 0xfdffffff);
                                     if (trace.allsolid == 0)
                                     {
-                                        (*pm)->ps->pm_flags &= ~0xfffffffe;
+                                        (*pm)->ps->pm_flags &= ~1u;//&= ~0xfffffffe;
                                         (*pm)->ps->pm_flags |= 2;
                                     }
                                     else if (((*pm)->cmd.wbuttons & 2) == 0)
@@ -1121,10 +1139,15 @@ void custom_PM_CheckDuck()
                         }
                         else if (((*pm)->ps->pm_flags & PMF_PRONE) == 0)
                         {
+                            //printf("##### pm_flags & PMF_PRONE) == 0\n");
+                            // here = being crouched
                             (*pm)->ps->pm_flags |= 2;
                         }
                         else
                         {
+                            printf("##### else\n");
+                            // here = going crouch from prone
+                            // or being proned > stand > crouch
                             (*pm)->maxs[2] = 50.0;
                             (*pm)->trace3(
                                 &trace, 
@@ -1136,7 +1159,7 @@ void custom_PM_CheckDuck()
                                 (*pm)->tracemask & 0xfdffffff);
                             if (trace.allsolid == 0)
                             {
-                                (*pm)->ps->pm_flags &= ~0xfffffffe;
+                                (*pm)->ps->pm_flags &= ~1u; // using ida value because ghidra's one seems to not clear
                                 (*pm)->ps->pm_flags |= 2;
                             }
                             else if(((*pm)->cmd.wbuttons & 2) == 0)
@@ -1163,8 +1186,12 @@ void custom_PM_CheckDuck()
                                 0,
                                 60.0)))
                     {
+                        //printf("##### in\n");
+                        // here = pressed prone when in air
                         if ((*pm)->ps->groundEntityNum != 1023)
                         {
+                            printf("##### in2\n");
+                            // here = prone before falling
                             (*pm)->ps->pm_flags |= 0x8000;
                             if (((*pm)->cmd.wbuttons & 2) == 0)
                             {
@@ -1181,33 +1208,43 @@ void custom_PM_CheckDuck()
                     }
                     else
                     {
-                        (*pm)->ps->pm_flags |= 2;
-                        (*pm)->ps->pm_flags &= ~0xfffffffd;
+                        //printf("##### _else\n");
+                        // here = proned
+                        (*pm)->ps->pm_flags |= 1;
+                        (*pm)->ps->pm_flags &= ~2u; // using ida value or ads gets messed up (proned)
                     }
                 }
             }
             else if ((((*pm)->ps->eFlags & 0x4000) == 0) || ((*pm)->ps->eFlags & 0x8000) != 0)
             {
+                printf("##### PASS\n");
                 if ((((*pm)->ps->eFlags & 0x8000) == 0) || ((*pm)->ps->eFlags & 0x4000) != 0)
                 {
+                    printf("##### PASS2\n");
                     (*pm)->ps->pm_flags &= ~0xfffffffc;
                 }
                 else
                 {
+                    printf("##### PASS3\n");
                     (*pm)->ps->pm_flags |= 2;
                     (*pm)->ps->pm_flags &= ~0xfffffffe;
                 }
             }
             else
             {
+                printf("##### PASS4\n");
                 (*pm)->ps->pm_flags |= PMF_PRONE;
                 (*pm)->ps->pm_flags &= ~0xfffffffd;
             }
 
             if ((*pm)->ps->viewHeightLerpTime == 0)
             {
+                //printf("##### viewHeightLerpTime == 0\n");
+                // here = always
                 if (((*pm)->ps->pm_flags & PMF_PRONE) == 0)
                 {
+                    //printf("##### PMF_PRONE) == 0\n");
+                    // here = standing or crouched
                     if ((*pm)->ps->viewHeightTarget == (*pm)->ps->crouchMaxZ)
                     {
                         (*pm)->ps->viewHeightTarget = (*pm)->ps->crouchViewHeight;
@@ -1250,6 +1287,8 @@ void custom_PM_CheckDuck()
                     }
                     if ((*pm)->ps->viewHeightTarget != (*pm)->ps->crouchMaxZ)
                     {
+                        printf("##### viewHeightTarget != (*pm)->ps->crouchMaxZ\n");
+                        // here = proned
                         (*pm)->ps->viewHeightTarget = (*pm)->ps->crouchMaxZ;
                         (*pm)->proneChange = 1;
                         BG_PlayAnim((*pm)->ps, 0, ANIM_BP_TORSO, 0, 0, 1, 1);
@@ -1262,7 +1301,7 @@ void custom_PM_CheckDuck()
 
             PM_ViewHeightAdjust();
             stance = PM_GetEffectiveStance((*pm)->ps);
-            printf("##### stance == %i\n", stance);
+            //printf("##### stance == %i\n", stance);
             if (stance == 1)
             {
                 (*pm)->maxs[2] = 30.0;
@@ -1288,6 +1327,8 @@ void custom_PM_CheckDuck()
             }
             else
             {
+                printf("##### _ _else\n");
+                // here = being proned
                 (*pm)->trace = (*pm)->trace2;
                 (*pm)->ps->eFlags |= 0x10;
                 
@@ -1295,9 +1336,14 @@ void custom_PM_CheckDuck()
                 {
                     if ((*pm)->cmd.forwardmove != 0 || (*pm)->cmd.rightmove != 0)
                     {
+                        // here = go prone while moving and continue moving
+                        printf("##### PM_ClearAimDownSightFlag\n");
                         (*pm)->ps->pm_flags &= ~0xfffffbff;
                         PM_ClearAimDownSightFlag();
                     }
+
+                    printf("##### _PASS\n");
+                    // here = gone prone from crouch
 
                     VectorCopy((*pm)->ps->origin, vEnd);
                     vEnd[2] = vEnd[2] + 10.0;
@@ -1361,13 +1407,12 @@ void custom_PM_CheckDuck()
             if (((*pm)->ps->pm_flags & PMF_PRONE) == 0)
             {
                 (*pm)->trace = (*pm)->trace3;
-                (*pm)->ps->eFlags |= 0x10;
             }
             else
             {
                 (*pm)->trace = (*pm)->trace2;
-                (*pm)->ps->eFlags |= 0x10;
             }
+            (*pm)->ps->eFlags |= 0x10;
             PM_ViewHeightAdjust();
         }
     }

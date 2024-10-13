@@ -657,15 +657,15 @@ typedef struct
     vec3_t maxs;        // 0xCC
     byte watertype;     // 0xd8
     byte waterlevel;    // 0xd9
-    byte gap_DA[2];
+    byte gap_0xDA[2];
     float xyspeed;      // 0xDC
     int pmove_fixed;    // 0xE0
     int pmove_msec;     // 0xE4
     int proneChange;    // 0xE8
-    void (*trace)(trace_t *, const vec3_t, const vec3_t, const vec3_t, const vec3_t, int, int);     // 0xec
-    void (*trace2)(trace_t *, const vec3_t, const vec3_t, const vec3_t, const vec3_t, int, int);    // 0xF0
-    void (*trace3)(trace_t *, const vec3_t, const vec3_t, const vec3_t, const vec3_t, int, int);    // 0xF4
-    int (*pointcontents)(const vec3_t point, int passEntityNum, int); // 0xF8
+    void (*trace)(trace_t *, vec3_t, vec3_t, vec3_t, vec3_t, int, int);     // 0xec
+    void (*trace2)(trace_t *, vec3_t, vec3_t, vec3_t, vec3_t, int, int);    // 0xF0
+    void (*trace3)(trace_t *, vec3_t, vec3_t, vec3_t, vec3_t, int, int);    // 0xF4
+    byte gap_0xF4[4];
 } pmove_t;
 
 struct pml_t
