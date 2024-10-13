@@ -3,9 +3,9 @@
 #define qfalse  0
 
 // 3D vectors
-#define DotProduct(a,b)         ((a)[0]*(b)[0]+(a)[1]*(b)[1]+(a)[2]*(b)[2])
-#define VectorCopy(a,b)         ((b)[0]=(a)[0],(b)[1]=(a)[1],(b)[2]=(a)[2])
-#define	VectorScale(v, s, o)    ((o)[0]=(v)[0]*(s),(o)[1]=(v)[1]*(s),(o)[2]=(v)[2]*(s))
+#define DotProduct(a, b)        ((a)[0]*(b)[0]+(a)[1]*(b)[1]+(a)[2]*(b)[2])
+#define VectorCopy(a, b)        ((b)[0] = (a)[0], (b)[1] = (a)[1], (b)[2] = (a)[2])
+#define	VectorScale(v, s, o)    ((o)[0] = (v)[0]*(s), (o)[1] = (v)[1]*(s), (o)[2] = (v)[2]*(s))
 
 #define FLOAT_INT_BITS  13
 #define FLOAT_INT_BIAS  (1 << (FLOAT_INT_BITS - 1)) // 0x1000
@@ -393,7 +393,7 @@ typedef struct playerState_s
     int grenadeTimeLeft;    // 0x34
     int foliageSoundTime;   // 0x38
     int gravity;            // 0x3C
-    float leanf;            // 0x40
+    float sprintTime;       // 0x40
     int speed;              // 0x44
     vec3_t delta_angles;    // [0] = 0x48, [1] = 0x4C, [2] = 0x50
     int groundEntityNum;    // 0x54
@@ -421,7 +421,7 @@ typedef struct playerState_s
     int viewHeightLerpTime;     // 0xD4
     int viewHeightLerpTarget;   // 0xD8
     int viewHeightLerpDown;     // 0xDC
-    float viewHeightLerpPosAdj; // 0xE0
+    int viewHeightLerpPosAdj;   // 0xE0
     int damageEvent;            // 0xe4
     int damageYaw;              // 0xe8
     int damagePitch;            // 0xec
@@ -438,13 +438,16 @@ typedef struct playerState_s
     float crouchViewHeight;     // 0x340
     float standViewHeight;      // 0x344
     float deadViewHeight;       // 0x348
-    byte gap_0x34C[0x1C];
+    float runSpeedScale;        // 0x34c
+    float sprintSpeedScale;     // 0x350
+    byte gap_0x354[0x14];
     float proneDirection;       // 0x368
     float proneDirectionPitch;  // 0x36c
     float proneTorsoPitch;      // 0x370
     int viewlocked;             // 0x374
     int viewlocked_entNum;      // 0x378
-    byte gap_0x37C[8];
+    float friction;             // 0x37C
+    byte gap_0x380[4];
     int cursorHint;             // 0x384
     byte gap_0x388[4];
     int cursorHintString;       // 0x38c
@@ -662,10 +665,10 @@ typedef struct
     int pmove_fixed;    // 0xE0
     int pmove_msec;     // 0xE4
     int proneChange;    // 0xE8
-    void (*trace)(trace_t *, vec3_t, vec3_t, vec3_t, vec3_t, int, int);     // 0xec
-    void (*trace2)(trace_t *, vec3_t, vec3_t, vec3_t, vec3_t, int, int);    // 0xF0
-    void (*trace3)(trace_t *, vec3_t, vec3_t, vec3_t, vec3_t, int, int);    // 0xF4
-    byte gap_0xF4[4];
+    void (*trace)(trace_t *, const vec3_t, const vec3_t, const vec3_t, const vec3_t, int, int);     // 0xec
+    void (*trace2)(trace_t *, const vec3_t, const vec3_t, const vec3_t, const vec3_t, int, int);    // 0xF0
+    void (*trace3)(trace_t *, const vec3_t, const vec3_t, const vec3_t, const vec3_t, int, int);    // 0xF4
+    byte gap_0xF8[4];
 } pmove_t;
 
 struct pml_t

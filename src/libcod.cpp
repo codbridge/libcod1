@@ -1024,14 +1024,14 @@ void custom_PM_CheckDuck()
 
         if (((*pm)->cmd.wbuttons & KEY_MASK_PRONE) != 0)
         {
-            (*pm)->cmd.wbuttons &= 0xbf;
+            (*pm)->cmd.wbuttons &= ~KEY_MASK_PRONE;
             BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_STAND, 0, (*pm)->ps);
         }
 
         (*pm)->trace = (*pm)->trace3;
         (*pm)->ps->eFlags |= 0x10;
         (*pm)->ps->viewHeightTarget = 0;
-        (*pm)->ps->viewHeightCurrent = 0.0;
+        (*pm)->ps->viewHeightCurrent = 0;
     }
     else
     {
@@ -1245,24 +1245,34 @@ void custom_PM_CheckDuck()
                 {
                     //printf("##### PMF_PRONE) == 0\n");
                     // here = standing or crouched
-                    if ((*pm)->ps->viewHeightTarget == (*pm)->ps->crouchMaxZ)
+                    if ((float)(*pm)->ps->viewHeightTarget == (*pm)->ps->crouchMaxZ)
                     {
+                        printf("##### 1\n");
                         (*pm)->ps->viewHeightTarget = (*pm)->ps->crouchViewHeight;
+                        printf("##### viewHeightTarget(%i) set %f\n", (*pm)->ps->viewHeightTarget, (*pm)->ps->crouchViewHeight);
                         (*pm)->proneChange = 1;
                         BG_PlayAnim((*pm)->ps, 0, ANIM_BP_TORSO, 0, 0, 1, 1);
                     }
                     else if (((*pm)->ps->pm_flags & 2) == 0)
                     {
+                        //printf("##### 2\n");
+                        // here = standing
                         (*pm)->ps->viewHeightTarget = (*pm)->ps->standViewHeight;
+                        printf("##### viewHeightTarget(%i) set %f\n", (*pm)->ps->viewHeightTarget, (*pm)->ps->standViewHeight);
                     }
                     else
                     {
+                        //printf("##### 3\n");
+                        // here = crouched
                         (*pm)->ps->viewHeightTarget = (*pm)->ps->crouchViewHeight;
+                        printf("##### viewHeightTarget(%i) set %f\n", (*pm)->ps->viewHeightTarget, (*pm)->ps->crouchViewHeight);
                     }
                 }
-                else if ((*pm)->ps->viewHeightTarget == (*pm)->ps->standViewHeight)
+                else if ((float)(*pm)->ps->viewHeightTarget == (*pm)->ps->standViewHeight)
                 {
+                    printf("##### 4\n");
                     (*pm)->ps->viewHeightTarget = (*pm)->ps->crouchViewHeight;
+                    printf("##### viewHeightTarget(%i) set %f\n", (*pm)->ps->viewHeightTarget, (*pm)->ps->crouchViewHeight);
                 }
                 else
                 {
@@ -1285,11 +1295,12 @@ void custom_PM_CheckDuck()
                             0,
                             60.0);
                     }
-                    if ((*pm)->ps->viewHeightTarget != (*pm)->ps->crouchMaxZ)
+                    if ((float)(*pm)->ps->viewHeightTarget != (*pm)->ps->crouchMaxZ)
                     {
                         printf("##### viewHeightTarget != (*pm)->ps->crouchMaxZ\n");
                         // here = proned
                         (*pm)->ps->viewHeightTarget = (*pm)->ps->crouchMaxZ;
+                        printf("##### viewHeightTarget(%i) set %f\n", (*pm)->ps->viewHeightTarget, (*pm)->ps->crouchMaxZ);
                         (*pm)->proneChange = 1;
                         BG_PlayAnim((*pm)->ps, 0, ANIM_BP_TORSO, 0, 0, 1, 1);
                         // Jump_ActivateSlowdown
@@ -1306,7 +1317,7 @@ void custom_PM_CheckDuck()
             {
                 (*pm)->maxs[2] = 30.0;
                 (*pm)->ps->eFlags |= EF_PRONE;
-                (*pm)->ps->eFlags &= ~0xffffffdf;
+                (*pm)->ps->eFlags &= ~EF_CROUCHING;
             }
             else if (stance == 2)
             {
@@ -1346,30 +1357,35 @@ void custom_PM_CheckDuck()
                     // here = gone prone from crouch
 
                     VectorCopy((*pm)->ps->origin, vEnd);
-                    vEnd[2] = vEnd[2] + 10.0;
+                    vEnd[2] += 10.0;
+
                     (*pm)->trace2(
-                        &trace, 
-                        (*pm)->ps->origin, 
-                        (*pm)->mins, 
-                        (*pm)->maxs, 
-                        vEnd, 
-                        (*pm)->ps->clientNum, 
+                        &trace,
+                        (*pm)->ps->origin,
+                        (*pm)->mins,
+                        (*pm)->maxs,
+                        vEnd,
+                        (*pm)->ps->clientNum,
                         (*pm)->tracemask & 0xfdffffff);
-                    VectorCopy(vEnd, trace.endpos);
+
+                    VectorCopy(trace.endpos, vEnd);
+
                     (*pm)->trace2(
-                        &trace, 
-                        vEnd, 
-                        (*pm)->mins, 
-                        (*pm)->maxs, 
-                        (*pm)->ps->origin, 
-                        (*pm)->ps->clientNum, 
+                        &trace,
+                        vEnd,
+                        (*pm)->mins,
+                        (*pm)->maxs,
+                        (*pm)->ps->origin,
+                        (*pm)->ps->clientNum,
                         (*pm)->tracemask & 0xfdffffff);
-                    VectorCopy((*pm)->ps->origin, trace.endpos);
+
+                    VectorCopy(trace.endpos, (*pm)->ps->origin);
 
                     (*pm)->ps->proneDirection = (*pm)->ps->viewangles[1];
 
                     VectorCopy((*pm)->ps->origin, vPoint);
-                    vPoint[2] = vPoint[2] - 0.25;
+                    vPoint[2] -= 0.25;
+
                     (*pm)->trace2(
                         &trace, 
                         (*pm)->ps->origin, 
@@ -1404,6 +1420,7 @@ void custom_PM_CheckDuck()
         {
             (*pm)->maxs[2] = (*pm)->ps->maxs[2];
             (*pm)->ps->viewHeightTarget = (*pm)->ps->deadViewHeight;
+            printf("##### viewHeightTarget(%i) set %f\n", (*pm)->ps->viewHeightTarget, (*pm)->ps->deadViewHeight);
             if (((*pm)->ps->pm_flags & PMF_PRONE) == 0)
             {
                 (*pm)->trace = (*pm)->trace3;
