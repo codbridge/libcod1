@@ -251,16 +251,16 @@ typedef struct trace_s
 
 typedef struct usercmd_s
 {
-    int serverTime; // 0x0
-    byte buttons;   // 0x4      // console, chat, ads, attack, use
-    byte wbuttons;  // 0x5      // lean left, lean right, reload
-    byte weapon;    // 0x6
-    byte gap0x7;
-    int angles[3];  // 0x8
-    signed char forwardmove;    // 0x14
-    signed char rightmove;      // 0x15
-    signed char upmove;         // 0x16
-    byte gap0x17;
+    int serverTime; // 0x0  // pm + 4
+    byte buttons;   // 0x4  // pm + 8   // console, chat, ads, attack, use
+    byte wbuttons;  // 0x5  // pm + 9   // lean left, lean right, reload
+    byte weapon;    // 0x6  // pm + 10
+    byte gap0x7;            // pm + 11
+    int angles[3];  // 0x8  // pm + 12
+    signed char forwardmove;    // 0x14     // pm + 24
+    signed char rightmove;      // 0x15     // pm + 25
+    signed char upmove;         // 0x16     // pm + 26
+    byte gap0x17;                           // pm + 27
 } usercmd_t;
 
 typedef void netProfileInfo_t;
@@ -393,7 +393,7 @@ typedef struct playerState_s
     int grenadeTimeLeft;    // 0x34
     int foliageSoundTime;   // 0x38
     int gravity;            // 0x3C
-    float sprintTime;       // 0x40
+    float leanf;            // 0x40
     int speed;              // 0x44
     vec3_t delta_angles;    // [0] = 0x48, [1] = 0x4C, [2] = 0x50
     int groundEntityNum;    // 0x54

@@ -32,7 +32,7 @@ typedef float (*AngleDelta_t)(float angle1, float angle2);
 //// BG
 typedef void (*BG_AddPredictableEventToPlayerstate_t)(int newEvent, int eventParm, playerState_t *ps);
 typedef int (*BG_CheckProne_t)(
-    int passEntityNum, float const * const vPos, float fSize, float fHeight, float fYaw, float * pfTorsoHeight, float * pfTorsoPitch, float * pfWaistPitch, int bAlreadyProne, int bOnGround, float * const vGroundNormal,
+    int passEntityNum, const float *const vPos, float fSize, float fHeight, float fYaw, float * pfTorsoHeight, float * pfTorsoPitch, float * pfWaistPitch, int bAlreadyProne, int bOnGround, float *const vGroundNormal,
     void (*)(trace_t *, const vec3_t, const vec3_t, const vec3_t, const vec3_t, int, int),
     void (*)(trace_t *, const vec3_t, const vec3_t, const vec3_t, const vec3_t, int, int),
     int proneCheckType, float prone_feet_dist);

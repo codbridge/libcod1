@@ -1028,7 +1028,7 @@ void custom_PM_CheckDuck()
             BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_STAND, 0, (*pm)->ps);
         }
 
-        (*pm)->trace = (*pm)->trace3;
+        (*pm)->trace = (*(*pm)->trace3);
         (*pm)->ps->eFlags |= 0x10;
         (*pm)->ps->viewHeightTarget = 0;
         (*pm)->ps->viewHeightCurrent = 0;
@@ -1045,6 +1045,7 @@ void custom_PM_CheckDuck()
 
         if ((*pm)->ps->pm_type < PM_DEAD)
         {
+#if 1
             if (((*pm)->ps->eFlags & 0xC000) == 0)
             {
                 //printf("##### & 0xC000) == 0\n");
@@ -1078,13 +1079,13 @@ void custom_PM_CheckDuck()
                                     printf("##### pm_flags & 2) != 0\n");
                                     // here = crouch/prone, then stand
                                     (*pm)->maxs[2] = (*pm)->ps->maxs[2];
-                                    (*pm)->trace3(
+                                    (*(*pm)->trace3)(
                                         &trace,
-                                        (*pm)->ps->origin, 
-                                        (*pm)->mins, 
-                                        (*pm)->maxs, 
-                                        (*pm)->ps->origin, 
-                                        (*pm)->ps->clientNum, 
+                                        (*pm)->ps->origin,
+                                        (*pm)->mins,
+                                        (*pm)->maxs,
+                                        (*pm)->ps->origin,
+                                        (*pm)->ps->clientNum,
                                         (*pm)->tracemask & 0xfdffffff);
                                     if (trace.allsolid == 0)
                                     {
@@ -1102,32 +1103,32 @@ void custom_PM_CheckDuck()
                                 // here = being standing when did stand up while moving when being proned
 
                                 (*pm)->maxs[2] = (*pm)->ps->maxs[2];
-                                (*pm)->trace3(
+                                (*(*pm)->trace3)(
                                     &trace,
-                                    (*pm)->ps->origin, 
-                                    (*pm)->mins, 
-                                    (*pm)->maxs, 
-                                    (*pm)->ps->origin, 
-                                    (*pm)->ps->clientNum, 
+                                    (*pm)->ps->origin,
+                                    (*pm)->mins,
+                                    (*pm)->maxs,
+                                    (*pm)->ps->origin,
+                                    (*pm)->ps->clientNum,
                                     (*pm)->tracemask & 0xfdffffff);
                                 if (trace.allsolid == 0)
                                 {
-                                    (*pm)->ps->pm_flags &= ~2u;//&= ~0xfffffffc;
+                                    (*pm)->ps->pm_flags &= ~2u;
                                 }
                                 else
                                 {
                                     (*pm)->maxs[2] = 50.0;
-                                    (*pm)->trace3(
-                                        &trace, 
-                                        (*pm)->ps->origin, 
-                                        (*pm)->mins, 
-                                        (*pm)->maxs, 
-                                        (*pm)->ps->origin, 
-                                        (*pm)->ps->clientNum, 
+                                    (*(*pm)->trace3)(
+                                        &trace,
+                                        (*pm)->ps->origin,
+                                        (*pm)->mins,
+                                        (*pm)->maxs,
+                                        (*pm)->ps->origin,
+                                        (*pm)->ps->clientNum,
                                         (*pm)->tracemask & 0xfdffffff);
                                     if (trace.allsolid == 0)
                                     {
-                                        (*pm)->ps->pm_flags &= ~1u;//&= ~0xfffffffe;
+                                        (*pm)->ps->pm_flags &= ~1u;
                                         (*pm)->ps->pm_flags |= 2;
                                     }
                                     else if (((*pm)->cmd.wbuttons & 2) == 0)
@@ -1149,17 +1150,17 @@ void custom_PM_CheckDuck()
                             // here = going crouch from prone
                             // or being proned > stand > crouch
                             (*pm)->maxs[2] = 50.0;
-                            (*pm)->trace3(
-                                &trace, 
-                                (*pm)->ps->origin, 
-                                (*pm)->mins, 
-                                (*pm)->maxs, 
-                                (*pm)->ps->origin, 
-                                (*pm)->ps->clientNum, 
+                            (*(*pm)->trace3)(
+                                &trace,
+                                (*pm)->ps->origin,
+                                (*pm)->mins,
+                                (*pm)->maxs,
+                                (*pm)->ps->origin,
+                                (*pm)->ps->clientNum,
                                 (*pm)->tracemask & 0xfdffffff);
                             if (trace.allsolid == 0)
                             {
-                                (*pm)->ps->pm_flags &= ~1u; // using ida value because ghidra's one seems to not clear
+                                (*pm)->ps->pm_flags &= ~1u;
                                 (*pm)->ps->pm_flags |= 2;
                             }
                             else if(((*pm)->cmd.wbuttons & 2) == 0)
@@ -1181,8 +1182,8 @@ void custom_PM_CheckDuck()
                                 0,
                                 (*pm)->ps->groundEntityNum != 1023,
                                 0,
-                                (*pm)->trace3,
-                                (*pm)->trace2,
+                                (*(*pm)->trace3),
+                                (*(*pm)->trace2),
                                 0,
                                 60.0)))
                     {
@@ -1211,7 +1212,7 @@ void custom_PM_CheckDuck()
                         //printf("##### _else\n");
                         // here = proned
                         (*pm)->ps->pm_flags |= 1;
-                        (*pm)->ps->pm_flags &= ~2u; // using ida value or ads gets messed up (proned)
+                        (*pm)->ps->pm_flags &= ~2u;
                     }
                 }
             }
@@ -1221,20 +1222,20 @@ void custom_PM_CheckDuck()
                 if ((((*pm)->ps->eFlags & 0x8000) == 0) || ((*pm)->ps->eFlags & 0x4000) != 0)
                 {
                     printf("##### PASS2\n");
-                    (*pm)->ps->pm_flags &= ~0xfffffffc;
+                    (*pm)->ps->pm_flags &= 0xfffffffc;
                 }
                 else
                 {
                     printf("##### PASS3\n");
                     (*pm)->ps->pm_flags |= 2;
-                    (*pm)->ps->pm_flags &= ~0xfffffffe;
+                    (*pm)->ps->pm_flags &= ~PMF_PRONE;
                 }
             }
             else
             {
                 printf("##### PASS4\n");
                 (*pm)->ps->pm_flags |= PMF_PRONE;
-                (*pm)->ps->pm_flags &= ~0xfffffffd;
+                (*pm)->ps->pm_flags &= ~2u;
             }
 
             if ((*pm)->ps->viewHeightLerpTime == 0)
@@ -1249,7 +1250,6 @@ void custom_PM_CheckDuck()
                     {
                         printf("##### 1\n");
                         (*pm)->ps->viewHeightTarget = (*pm)->ps->crouchViewHeight;
-                        printf("##### viewHeightTarget(%i) set %f\n", (*pm)->ps->viewHeightTarget, (*pm)->ps->crouchViewHeight);
                         (*pm)->proneChange = 1;
                         BG_PlayAnim((*pm)->ps, 0, ANIM_BP_TORSO, 0, 0, 1, 1);
                     }
@@ -1258,14 +1258,12 @@ void custom_PM_CheckDuck()
                         //printf("##### 2\n");
                         // here = standing
                         (*pm)->ps->viewHeightTarget = (*pm)->ps->standViewHeight;
-                        printf("##### viewHeightTarget(%i) set %f\n", (*pm)->ps->viewHeightTarget, (*pm)->ps->standViewHeight);
                     }
                     else
                     {
                         //printf("##### 3\n");
                         // here = crouched
                         (*pm)->ps->viewHeightTarget = (*pm)->ps->crouchViewHeight;
-                        printf("##### viewHeightTarget(%i) set %f\n", (*pm)->ps->viewHeightTarget, (*pm)->ps->crouchViewHeight);
                     }
                 }
                 else if ((float)(*pm)->ps->viewHeightTarget == (*pm)->ps->standViewHeight)
@@ -1290,8 +1288,8 @@ void custom_PM_CheckDuck()
                             0,
                             (*pm)->ps->groundEntityNum != 1023,
                             0,
-                            (*pm)->trace3,
-                            (*pm)->trace2,
+                            (*(*pm)->trace3),
+                            (*(*pm)->trace2),
                             0,
                             60.0);
                     }
@@ -1300,7 +1298,6 @@ void custom_PM_CheckDuck()
                         printf("##### viewHeightTarget != (*pm)->ps->crouchMaxZ\n");
                         // here = proned
                         (*pm)->ps->viewHeightTarget = (*pm)->ps->crouchMaxZ;
-                        printf("##### viewHeightTarget(%i) set %f\n", (*pm)->ps->viewHeightTarget, (*pm)->ps->crouchMaxZ);
                         (*pm)->proneChange = 1;
                         BG_PlayAnim((*pm)->ps, 0, ANIM_BP_TORSO, 0, 0, 1, 1);
                         // Jump_ActivateSlowdown
@@ -1309,7 +1306,7 @@ void custom_PM_CheckDuck()
                     }
                 }
             }
-
+#endif
             PM_ViewHeightAdjust();
             stance = PM_GetEffectiveStance((*pm)->ps);
             //printf("##### stance == %i\n", stance);
@@ -1323,24 +1320,25 @@ void custom_PM_CheckDuck()
             {
                 (*pm)->maxs[2] = 50.0;
                 (*pm)->ps->eFlags |= EF_CROUCHING;
-                (*pm)->ps->eFlags &= ~0xffffffbf;
+                (*pm)->ps->eFlags &= 0xffffffbf;
             }
             else
             {
                 (*pm)->maxs[2] = (*pm)->ps->maxs[2];
-                (*pm)->ps->eFlags &= ~0xffffff9f;
+                (*pm)->ps->eFlags &= 0xffffff9f;
             }
 
+#if 1
             if (((*pm)->ps->pm_flags & PMF_PRONE) == 0)
             {
-                (*pm)->trace = (*pm)->trace3;
+                (*pm)->trace = (*(*pm)->trace3);
                 (*pm)->ps->eFlags |= 0x10;
             }
             else
             {
                 printf("##### _ _else\n");
                 // here = being proned
-                (*pm)->trace = (*pm)->trace2;
+                (*pm)->trace = (*(*pm)->trace2);
                 (*pm)->ps->eFlags |= 0x10;
                 
                 if (bWasProne == 0)
@@ -1349,7 +1347,7 @@ void custom_PM_CheckDuck()
                     {
                         // here = go prone while moving and continue moving
                         printf("##### PM_ClearAimDownSightFlag\n");
-                        (*pm)->ps->pm_flags &= ~0xfffffbff;
+                        (*pm)->ps->pm_flags &= ~0x400u;
                         PM_ClearAimDownSightFlag();
                     }
 
@@ -1359,7 +1357,7 @@ void custom_PM_CheckDuck()
                     VectorCopy((*pm)->ps->origin, vEnd);
                     vEnd[2] += 10.0;
 
-                    (*pm)->trace2(
+                    (*(*pm)->trace2)(
                         &trace,
                         (*pm)->ps->origin,
                         (*pm)->mins,
@@ -1370,7 +1368,7 @@ void custom_PM_CheckDuck()
 
                     VectorCopy(trace.endpos, vEnd);
 
-                    (*pm)->trace2(
+                    (*(*pm)->trace2)(
                         &trace,
                         vEnd,
                         (*pm)->mins,
@@ -1386,13 +1384,13 @@ void custom_PM_CheckDuck()
                     VectorCopy((*pm)->ps->origin, vPoint);
                     vPoint[2] -= 0.25;
 
-                    (*pm)->trace2(
-                        &trace, 
-                        (*pm)->ps->origin, 
-                        (*pm)->mins, 
-                        (*pm)->maxs, 
-                        vPoint, 
-                        (*pm)->ps->clientNum, 
+                    (*(*pm)->trace2)(
+                        &trace,
+                        (*pm)->ps->origin,
+                        (*pm)->mins,
+                        (*pm)->maxs,
+                        vPoint,
+                        (*pm)->ps->clientNum,
                         (*pm)->tracemask & 0xfdffffff);
                     
                     if(trace.startsolid != 0 || trace.fraction >= 1.0)
@@ -1415,19 +1413,19 @@ void custom_PM_CheckDuck()
                     (*pm)->ps->proneTorsoPitch = (*pm)->ps->proneDirectionPitch;                    
                 }
             }
+#endif
         }
         else
         {
             (*pm)->maxs[2] = (*pm)->ps->maxs[2];
             (*pm)->ps->viewHeightTarget = (*pm)->ps->deadViewHeight;
-            printf("##### viewHeightTarget(%i) set %f\n", (*pm)->ps->viewHeightTarget, (*pm)->ps->deadViewHeight);
             if (((*pm)->ps->pm_flags & PMF_PRONE) == 0)
             {
-                (*pm)->trace = (*pm)->trace3;
+                (*pm)->trace = (*(*pm)->trace3);
             }
             else
             {
-                (*pm)->trace = (*pm)->trace2;
+                (*pm)->trace = (*(*pm)->trace2);
             }
             (*pm)->ps->eFlags |= 0x10;
             PM_ViewHeightAdjust();
