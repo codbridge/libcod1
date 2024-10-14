@@ -227,12 +227,8 @@ void gsc_testmethod(scr_entref_t ref)
     
     //client_t* client = &svs.clients[id];
     //playerState_t *ps = SV_GameClientNum(id);
+    //printf("###### ps->gap_0x380 = %i\n", ps->gap_0x380);
+        
 
-    //printf("###### client->name = %s\n", client->name);
-    
-
-
-    
-
-
+        
 }

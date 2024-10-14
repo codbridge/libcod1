@@ -13,7 +13,7 @@ void gsc_player_button_ads(scr_entref_t ref)
 
     client_t *client = &svs.clients[id];
 
-    stackPushBool(client->lastUsercmd.buttons & KEY_MASK_ADS_MODE ? qtrue : qfalse);
+    stackPushBool(client->lastUsercmd.buttons & BUTTON_ZOOM ? qtrue : qfalse);
 }
 
 void gsc_player_button_left(scr_entref_t ref)
@@ -109,7 +109,7 @@ void gsc_player_button_leanleft(scr_entref_t ref)
 
     client_t *client = &svs.clients[id];
     
-    stackPushBool(client->lastUsercmd.wbuttons & KEY_MASK_LEANLEFT ? qtrue : qfalse);
+    stackPushBool(client->lastUsercmd.wbuttons & WBUTTON_LEANLEFT ? qtrue : qfalse);
 }
 
 void gsc_player_button_leanright(scr_entref_t ref)
@@ -125,7 +125,7 @@ void gsc_player_button_leanright(scr_entref_t ref)
 
     client_t *client = &svs.clients[id];
 
-    stackPushBool(client->lastUsercmd.wbuttons & KEY_MASK_LEANRIGHT ? qtrue : qfalse);
+    stackPushBool(client->lastUsercmd.wbuttons & WBUTTON_LEANRIGHT ? qtrue : qfalse);
 }
 
 void gsc_player_button_reload(scr_entref_t ref)
@@ -141,7 +141,7 @@ void gsc_player_button_reload(scr_entref_t ref)
 
     client_t *client = &svs.clients[id];
 
-    stackPushBool(client->lastUsercmd.wbuttons & KEY_MASK_RELOAD ? qtrue : qfalse);
+    stackPushBool(client->lastUsercmd.wbuttons & WBUTTON_RELOAD ? qtrue : qfalse);
 }
 
 void gsc_player_getangles(scr_entref_t ref)

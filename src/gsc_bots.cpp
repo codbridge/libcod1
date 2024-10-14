@@ -29,9 +29,9 @@ void gsc_bots_setuse(scr_entref_t ref)
     }
 
     if(!use)
-        customPlayerState[id].botButtons &= ~KEY_MASK_USE;
+        customPlayerState[id].botButtons &= ~BUTTON_USE;
     else
-        customPlayerState[id].botButtons |= KEY_MASK_USE;
+        customPlayerState[id].botButtons |= BUTTON_USE;
 
     stackPushBool(qtrue);
 }

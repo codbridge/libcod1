@@ -39,30 +39,39 @@
 #define CVAR_SYSTEMINFO     (1 << 3)    // 0x0008
 #define CVAR_CHEAT          (1 << 9)    // 0x0200
 
-#define KEY_MASK_NONE           0
-#define KEY_MASK_FORWARD        127
-#define KEY_MASK_BACK           -127
-#define KEY_MASK_MOVERIGHT      127
-#define KEY_MASK_MOVELEFT       -127
-#define KEY_MASK_JUMP           127 // upmove. prone and jump = -KEY_MASK_JUMP
-#define KEY_MASK_FIRE           0x1
-#define KEY_MASK_RELOAD         0x8
-#define KEY_MASK_LEANLEFT       0x10
-#define KEY_MASK_ADS_MODE       0x10
-#define KEY_MASK_LEANRIGHT      0x20
-#define KEY_MASK_MELEE          0x20
-#define KEY_MASK_USE            0x40
-#define KEY_MASK_PRONE          0x40 // wbuttons
-#define KEY_MASK_CROUCH         0x80 // wbuttons
+#define BUTTON_ATTACK       0x1
+#define BUTTON_TALK         0x2
+#define BUTTON_ZOOM         0x10
+#define BUTTON_MELEE        0x20
+#define BUTTON_USE          0x40
+
+#define WBUTTON_RELOAD      0x8
+#define WBUTTON_LEANLEFT    0x10
+#define WBUTTON_LEANRIGHT   0x20
+#define WBUTTON_PRONE       0x40
+#define WBUTTON_CROUCH      0x80
+
+#define KEY_MASK_FORWARD    127
+#define KEY_MASK_BACK       -127
+#define KEY_MASK_MOVERIGHT  127
+#define KEY_MASK_MOVELEFT   -127
+#define KEY_MASK_JUMP       127 // upmove. prone and jump = -KEY_MASK_JUMP
 
 #define EF_CROUCHING    0x20
 #define EF_PRONE        0x40
+#define EF_ZOOMING      0x200
+#define EF_MG42_ACTIVE  0xC000
+#define EF_TALK         0x40000
 
-#define PMF_PRONE       0x1
-#define PMF_CROUCH      0x2
-#define PMF_DUCKED      PMF_CROUCH
-#define PMF_LADDER      0x10
-#define PMF_JUMPING     0x2000
+#define PMF_PRONE           0x1
+#define PMF_CROUCH          0x2
+#define PMF_DUCKED          PMF_CROUCH
+#define PMF_LADDER          0x10
+#define PMF_SLIDING         0x100
+#define PMF_RESPAWNED       0x800
+#define PMF_JUMPING         0x2000
+#define PMF_VIEWLOCKED      0x20000
+#define PMF_DISABLEWEAPON   0x100000
 
 #define JUMP_LAND_SLOWDOWN_TIME 1800
 #define OVERCLIP 1.001
@@ -256,7 +265,7 @@ typedef struct usercmd_s
     byte wbuttons;  // 0x5  // pm + 9   // lean left, lean right, reload
     byte weapon;    // 0x6  // pm + 10
     byte gap0x7;            // pm + 11
-    int angles[3];  // 0x8  // pm + 12
+    int angles[3];  // 0x8  // pm + 12  [0] = 0x8, [1] = 0xC, [2] = 0x10
     signed char forwardmove;    // 0x14     // pm + 24
     signed char rightmove;      // 0x15     // pm + 25
     signed char upmove;         // 0x16     // pm + 26
