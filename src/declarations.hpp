@@ -444,10 +444,10 @@ typedef struct playerState_s
     unsigned int weaponrechamber[2]; // 0x31c
     vec3_t mins;                // 0x324
     vec3_t maxs;                // 0x330
-    float crouchMaxZ;           // 0x33C
-    float crouchViewHeight;     // 0x340
-    float standViewHeight;      // 0x344
-    float deadViewHeight;       // 0x348
+    int crouchMaxZ;             // 0x33C
+    int crouchViewHeight;       // 0x340
+    int standViewHeight;        // 0x344
+    int deadViewHeight;         // 0x348
     byte gap_0x34C[8];
     float proneSpeedScale;      // 0x354
     byte gap_0x358[0x10];

@@ -1031,7 +1031,7 @@ void custom_PM_CheckDuck()
         (*pm)->trace = (*pm)->trace3;
         (*pm)->ps->eFlags |= 0x10;
         (*pm)->ps->viewHeightTarget = 0;
-        (*pm)->ps->viewHeightCurrent = 0;
+        (*pm)->ps->viewHeightCurrent = 0.0;
     }
     else
     {
@@ -1251,7 +1251,7 @@ void custom_PM_CheckDuck()
                 {
                     //printf("##### PMF_PRONE) == 0\n");
                     // here = standing or crouched
-                    if ((float)(*pm)->ps->viewHeightTarget == (*pm)->ps->crouchMaxZ)
+                    if ((*pm)->ps->viewHeightTarget == (*pm)->ps->crouchMaxZ)
                     {
                         printf("##### 1\n");
                         (*pm)->ps->viewHeightTarget = (*pm)->ps->crouchViewHeight;
@@ -1262,6 +1262,7 @@ void custom_PM_CheckDuck()
                     {
                         //printf("##### 2\n");
                         // here = standing
+                        printf("##### viewHeightTarget(%i) set standViewHeight(%i)\n", (*pm)->ps->viewHeightTarget, (*pm)->ps->standViewHeight);
                         (*pm)->ps->viewHeightTarget = (*pm)->ps->standViewHeight;
                     }
                     else
@@ -1271,7 +1272,7 @@ void custom_PM_CheckDuck()
                         (*pm)->ps->viewHeightTarget = (*pm)->ps->crouchViewHeight;
                     }
                 }
-                else if ((float)(*pm)->ps->viewHeightTarget == (*pm)->ps->standViewHeight)
+                else if ((*pm)->ps->viewHeightTarget == (*pm)->ps->standViewHeight)
                 {
                     printf("##### 4\n");
                     (*pm)->ps->viewHeightTarget = (*pm)->ps->crouchViewHeight;
@@ -1297,7 +1298,7 @@ void custom_PM_CheckDuck()
                             0,
                             60.0);
                     }
-                    if ((float)(*pm)->ps->viewHeightTarget != (*pm)->ps->crouchMaxZ)
+                    if ((*pm)->ps->viewHeightTarget != (*pm)->ps->crouchMaxZ)
                     {
                         printf("##### viewHeightTarget != (*pm)->ps->crouchMaxZ\n");
                         // here = proned
@@ -1722,7 +1723,7 @@ void *custom_Sys_LoadDll(const char *name, char *fqpath, int (**entryPoint)(int,
     hook_jmp((int)dlsym(libHandle, "_init") + 0xBBF1, (int)custom_PM_GetReducedFriction);
     hook_jmp((int)dlsym(libHandle, "_init") + 0xBC52, (int)custom_PM_GetLandFactor);
 #endif
-#if 0
+#if 1
     hook_jmp((int)dlsym(libHandle, "_init") + 0x104C4, (int)custom_PM_CheckDuck);
 #endif
 
