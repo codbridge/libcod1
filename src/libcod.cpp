@@ -1007,12 +1007,17 @@ void custom_PM_CheckDuck()
     vec3_t vEnd;
     float delta;
     vec3_t vPoint;
+    playerState_t *ps;
     int stance;
     trace_t trace;
     int bWasProne;
-    
+    int clientProtocol;
+
+    ps = (*pm)->ps;
+    clientProtocol = customPlayerState[ps->clientNum].protocolVersion;
     (*pm)->proneChange = 0;
-    if ((*pm)->ps->pm_type == PM_SPECTATOR)
+    
+    if (ps->pm_type == PM_SPECTATOR)
     {
         (*pm)->mins[0] = -8.0;
         (*pm)->mins[1] = -8.0;
@@ -1020,293 +1025,296 @@ void custom_PM_CheckDuck()
         (*pm)->maxs[0] = 8.0;
         (*pm)->maxs[1] = 8.0;
         (*pm)->maxs[2] = 16.0;
-        (*pm)->ps->pm_flags &= 0xfffffffc;
+        ps->pm_flags &= 0xfffffffc;
 
         if (((*pm)->cmd.wbuttons & WBUTTON_PRONE) != 0)
         {
             (*pm)->cmd.wbuttons &= ~WBUTTON_PRONE;
-            BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_STAND, 0, (*pm)->ps);
+            BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_STAND, 0, ps);
         }
 
         (*pm)->trace = (*pm)->trace3;
-        (*pm)->ps->eFlags |= 0x10;
-        (*pm)->ps->viewHeightTarget = 0;
-        (*pm)->ps->viewHeightCurrent = 0.0;
+        ps->eFlags |= 0x10;
+        ps->viewHeightTarget = 0;
+        ps->viewHeightCurrent = 0.0;
     }
     else
     {
-        bWasProne = ((*pm)->ps->pm_flags & PMF_PRONE);
+        bWasProne = (ps->pm_flags & PMF_PRONE);
 
-        (*pm)->mins[0] = (*pm)->ps->mins[0];
-        (*pm)->mins[1] = (*pm)->ps->mins[1];
-        (*pm)->maxs[0] = (*pm)->ps->maxs[0];
-        (*pm)->maxs[1] = (*pm)->ps->maxs[1];
-        (*pm)->mins[2] = (*pm)->ps->mins[2];
+        (*pm)->mins[0] = ps->mins[0];
+        (*pm)->mins[1] = ps->mins[1];
+        (*pm)->maxs[0] = ps->maxs[0];
+        (*pm)->maxs[1] = ps->maxs[1];
+        (*pm)->mins[2] = ps->mins[2];
 
-        if ((*pm)->ps->pm_type < PM_DEAD)
+        if (ps->pm_type < PM_DEAD)
         {
-            if (((*pm)->ps->eFlags & EF_MG42_ACTIVE) == 0)
+            if ((ps->eFlags & EF_MG42_ACTIVE) == 0)
             {
-                if (((*pm)->ps->pm_flags & 0x4000) == 0)
+                if ((ps->pm_flags & 0x4000) == 0)
                 {
-                    if ((((*pm)->ps->pm_flags & PMF_LADDER) != 0) && (((*pm)->cmd.wbuttons & 0xC0) != 0))
+                    if (((ps->pm_flags & PMF_LADDER) != 0) && (((*pm)->cmd.wbuttons & 0xC0) != 0))
                     {
                         (*pm)->cmd.wbuttons &= 0x3f;
-                        BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_STAND, 0, (*pm)->ps);
+                        BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_STAND, 0, ps);
                     }
                     if (((*pm)->cmd.wbuttons & WBUTTON_PRONE) == 0)
                     {
                         if (((*pm)->cmd.wbuttons & WBUTTON_CROUCH) == 0)
                         {
-                            if (((*pm)->ps->pm_flags & PMF_PRONE) == 0)
+                            if ((ps->pm_flags & PMF_PRONE) == 0)
                             {
-                                if (((*pm)->ps->pm_flags & PMF_CROUCH) != 0)
+                                if ((ps->pm_flags & PMF_CROUCH) != 0)
                                 {
-                                    (*pm)->maxs[2] = (*pm)->ps->maxs[2];
+                                    (*pm)->maxs[2] = ps->maxs[2];
                                     (*pm)->trace3(
                                         &trace,
-                                        (*pm)->ps->origin,
+                                        ps->origin,
                                         (*pm)->mins,
                                         (*pm)->maxs,
-                                        (*pm)->ps->origin,
-                                        (*pm)->ps->clientNum,
+                                        ps->origin,
+                                        ps->clientNum,
                                         (*pm)->tracemask & 0xfdffffff);
                                     if (trace.allsolid == 0)
                                     {
-                                        (*pm)->ps->pm_flags &= ~PMF_CROUCH;
+                                        ps->pm_flags &= ~PMF_CROUCH;
                                     }
                                     else if(((*pm)->cmd.wbuttons & 2) == 0)
                                     {
-                                        BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_CROUCH, 0, (*pm)->ps);
+                                        BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_CROUCH, 0, ps);
                                     }
                                 }
                             }
                             else
                             {
-                                (*pm)->maxs[2] = (*pm)->ps->maxs[2];
+                                (*pm)->maxs[2] = ps->maxs[2];
                                 (*pm)->trace3(
                                     &trace,
-                                    (*pm)->ps->origin,
+                                    ps->origin,
                                     (*pm)->mins,
                                     (*pm)->maxs,
-                                    (*pm)->ps->origin,
-                                    (*pm)->ps->clientNum,
+                                    ps->origin,
+                                    ps->clientNum,
                                     (*pm)->tracemask & 0xfdffffff);
                                 if (trace.allsolid == 0)
                                 {
-                                    (*pm)->ps->pm_flags &= 0xFFFFFFFC;
+                                    ps->pm_flags &= 0xFFFFFFFC;
                                 }
                                 else
                                 {
                                     (*pm)->maxs[2] = 50.0;
                                     (*pm)->trace3(
                                         &trace,
-                                        (*pm)->ps->origin,
+                                        ps->origin,
                                         (*pm)->mins,
                                         (*pm)->maxs,
-                                        (*pm)->ps->origin,
-                                        (*pm)->ps->clientNum,
+                                        ps->origin,
+                                        ps->clientNum,
                                         (*pm)->tracemask & 0xfdffffff);
                                     if (trace.allsolid == 0)
                                     {
-                                        (*pm)->ps->pm_flags &= ~PMF_PRONE;
-                                        (*pm)->ps->pm_flags |= PMF_CROUCH;
+                                        ps->pm_flags &= ~PMF_PRONE;
+                                        ps->pm_flags |= PMF_CROUCH;
                                     }
                                     else if (((*pm)->cmd.wbuttons & 2) == 0)
                                     {
-                                        BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_PRONE, 0, (*pm)->ps);
+                                        BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_PRONE, 0, ps);
                                     }
                                 }
                             }
                         }
-                        else if (((*pm)->ps->pm_flags & PMF_PRONE) == 0)
+                        else if ((ps->pm_flags & PMF_PRONE) == 0)
                         {
-                            (*pm)->ps->pm_flags |= PMF_CROUCH;
+                            ps->pm_flags |= PMF_CROUCH;
                         }
                         else
                         {
                             (*pm)->maxs[2] = 50.0;
                             (*pm)->trace3(
                                 &trace,
-                                (*pm)->ps->origin,
+                                ps->origin,
                                 (*pm)->mins,
                                 (*pm)->maxs,
-                                (*pm)->ps->origin,
-                                (*pm)->ps->clientNum,
+                                ps->origin,
+                                ps->clientNum,
                                 (*pm)->tracemask & 0xfdffffff);
                             if (trace.allsolid == 0)
                             {
-                                (*pm)->ps->pm_flags &= ~PMF_PRONE;
-                                (*pm)->ps->pm_flags |= PMF_CROUCH;
+                                ps->pm_flags &= ~PMF_PRONE;
+                                ps->pm_flags |= PMF_CROUCH;
                             }
                             else if(((*pm)->cmd.wbuttons & 2) == 0)
                             {
-                                BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_PRONE, 0, (*pm)->ps);
+                                BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_PRONE, 0, ps);
                             }
                         }
                     }
-                    else if (((*pm)->ps->pm_flags & PMF_PRONE) == 0 &&
-                            (((*pm)->ps->groundEntityNum == 1023) || !BG_CheckProne(
-                                (*pm)->ps->clientNum,
-                                (*pm)->ps->origin,
+                    else if ((ps->pm_flags & PMF_PRONE) == 0 &&
+                            ((ps->groundEntityNum == 1023) || !BG_CheckProne(
+                                ps->clientNum,
+                                ps->origin,
                                 (*pm)->maxs[0],
                                 30.0,
-                                (*pm)->ps->viewangles[1],
-                                &(*pm)->ps->fTorsoHeight,
-                                &(*pm)->ps->fTorsoPitch,
-                                &(*pm)->ps->fWaistPitch,
+                                ps->viewangles[1],
+                                &ps->fTorsoHeight,
+                                &ps->fTorsoPitch,
+                                &ps->fWaistPitch,
                                 0,
-                                (*pm)->ps->groundEntityNum != 1023,
+                                ps->groundEntityNum != 1023,
                                 0,
                                 (*pm)->trace3,
                                 (*pm)->trace2,
                                 0,
                                 60.0)))
                     {
-                        if ((*pm)->ps->groundEntityNum != 1023)
+                        if (ps->groundEntityNum != 1023)
                         {
-                            (*pm)->ps->pm_flags |= 0x8000;
+                            ps->pm_flags |= 0x8000;
                             if (((*pm)->cmd.wbuttons & 2) == 0)
                             {
-                                if (((*pm)->ps->pm_flags & PMF_CROUCH) == 0)
+                                if ((ps->pm_flags & PMF_CROUCH) == 0)
                                 {
-                                    BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_STAND, 0, (*pm)->ps);
+                                    BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_STAND, 0, ps);
                                 }
                                 else
                                 {
-                                    BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_CROUCH, 0, (*pm)->ps);
+                                    BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_CROUCH, 0, ps);
                                 }
                             }
                         }
                     }
                     else
                     {
-                        (*pm)->ps->pm_flags |= PMF_PRONE;
-                        (*pm)->ps->pm_flags &= ~PMF_CROUCH;
+                        ps->pm_flags |= PMF_PRONE;
+                        ps->pm_flags &= ~PMF_CROUCH;
                     }
                 }
             }
-            else if ((((*pm)->ps->eFlags & 0x4000) == 0) || ((*pm)->ps->eFlags & 0x8000) != 0)
+            else if (((ps->eFlags & 0x4000) == 0) || (ps->eFlags & 0x8000) != 0)
             {
-                if ((((*pm)->ps->eFlags & 0x8000) == 0) || ((*pm)->ps->eFlags & 0x4000) != 0)
+                if (((ps->eFlags & 0x8000) == 0) || (ps->eFlags & 0x4000) != 0)
                 {
-                    (*pm)->ps->pm_flags &= 0xfffffffc;
+                    ps->pm_flags &= 0xfffffffc;
                 }
                 else
                 {
-                    (*pm)->ps->pm_flags |= PMF_CROUCH;
-                    (*pm)->ps->pm_flags &= ~PMF_PRONE;
+                    ps->pm_flags |= PMF_CROUCH;
+                    ps->pm_flags &= ~PMF_PRONE;
                 }
             }
             else
             {
-                (*pm)->ps->pm_flags |= PMF_PRONE;
-                (*pm)->ps->pm_flags &= ~PMF_CROUCH;
+                ps->pm_flags |= PMF_PRONE;
+                ps->pm_flags &= ~PMF_CROUCH;
             }
 
-            if ((*pm)->ps->viewHeightLerpTime == 0)
+            if (ps->viewHeightLerpTime == 0)
             {
-                if (((*pm)->ps->pm_flags & PMF_PRONE) == 0)
+                if ((ps->pm_flags & PMF_PRONE) == 0)
                 {
-                    if ((*pm)->ps->viewHeightTarget == (*pm)->ps->crouchMaxZ)
+                    if (ps->viewHeightTarget == ps->crouchMaxZ)
                     {
-                        (*pm)->ps->viewHeightTarget = (*pm)->ps->crouchViewHeight;
+                        ps->viewHeightTarget = ps->crouchViewHeight;
                         (*pm)->proneChange = 1;
-                        BG_PlayAnim((*pm)->ps, 0, ANIM_BP_TORSO, 0, 0, 1, 1);
+                        BG_PlayAnim(ps, 0, ANIM_BP_TORSO, 0, 0, 1, 1);
                     }
-                    else if (((*pm)->ps->pm_flags & PMF_CROUCH) == 0)
+                    else if ((ps->pm_flags & PMF_CROUCH) == 0)
                     {
-                        (*pm)->ps->viewHeightTarget = (*pm)->ps->standViewHeight;
+                        ps->viewHeightTarget = ps->standViewHeight;
                     }
                     else
                     {
-                        (*pm)->ps->viewHeightTarget = (*pm)->ps->crouchViewHeight;
+                        ps->viewHeightTarget = ps->crouchViewHeight;
                     }
                 }
-                else if ((*pm)->ps->viewHeightTarget == (*pm)->ps->standViewHeight)
+                else if (ps->viewHeightTarget == ps->standViewHeight)
                 {
-                    (*pm)->ps->viewHeightTarget = (*pm)->ps->crouchViewHeight;
+                    ps->viewHeightTarget = ps->crouchViewHeight;
                 }
                 else
                 {
                     if (g_debugProneCheck && g_debugProneCheck->integer == 2)
                     {
                         BG_CheckProne(
-                            (*pm)->ps->clientNum,
-                            (*pm)->ps->origin,
+                            ps->clientNum,
+                            ps->origin,
                             (*pm)->maxs[0],
                             30.0,
-                            (*pm)->ps->viewangles[1],
+                            ps->viewangles[1],
                             0,
                             0,
                             0,
                             0,
-                            (*pm)->ps->groundEntityNum != 1023,
+                            ps->groundEntityNum != 1023,
                             0,
                             (*pm)->trace3,
                             (*pm)->trace2,
                             0,
                             60.0);
                     }
-                    if ((*pm)->ps->viewHeightTarget != (*pm)->ps->crouchMaxZ)
+                    if (ps->viewHeightTarget != ps->crouchMaxZ)
                     {
-                        (*pm)->ps->viewHeightTarget = (*pm)->ps->crouchMaxZ;
+                        ps->viewHeightTarget = ps->crouchMaxZ;
                         (*pm)->proneChange = 1;
-                        BG_PlayAnim((*pm)->ps, 0, ANIM_BP_TORSO, 0, 0, 1, 1);
-                        // Jump_ActivateSlowdown
-                        (*pm)->ps->pm_flags |= PMF_JUMP_HELD | PMF_JUMPING;
-                        (*pm)->ps->pm_time = JUMP_LAND_SLOWDOWN_TIME;
+                        BG_PlayAnim(ps, 0, ANIM_BP_TORSO, 0, 0, 1, 1);
+                        if (clientProtocol != 1)
+                        {
+                            // Jump_ActivateSlowdown
+                            ps->pm_flags |= PMF_JUMP_HELD | PMF_JUMPING;
+                            ps->pm_time = JUMP_LAND_SLOWDOWN_TIME;
+                        }
                     }
                 }
             }
 
             PM_ViewHeightAdjust();
-            stance = PM_GetEffectiveStance((*pm)->ps);
+            stance = PM_GetEffectiveStance(ps);
             if (stance == STANCE_EFFECTIVE_PRONE)
             {
                 (*pm)->maxs[2] = 30.0;
-                (*pm)->ps->eFlags |= EF_PRONE;
-                (*pm)->ps->eFlags &= ~EF_CROUCHING;
+                ps->eFlags |= EF_PRONE;
+                ps->eFlags &= ~EF_CROUCHING;
             }
             else if (stance == STANCE_EFFECTIVE_CROUCH)
             {
                 (*pm)->maxs[2] = 50.0;
-                (*pm)->ps->eFlags |= EF_CROUCHING;
-                (*pm)->ps->eFlags &= 0xffffffbf;
+                ps->eFlags |= EF_CROUCHING;
+                ps->eFlags &= 0xffffffbf;
             }
             else
             {
-                (*pm)->maxs[2] = (*pm)->ps->maxs[2];
-                (*pm)->ps->eFlags &= 0xffffff9f;
+                (*pm)->maxs[2] = ps->maxs[2];
+                ps->eFlags &= 0xffffff9f;
             }
 
-            if (((*pm)->ps->pm_flags & PMF_PRONE) == 0)
+            if ((ps->pm_flags & PMF_PRONE) == 0)
             {
                 (*pm)->trace = (*pm)->trace3;
-                (*pm)->ps->eFlags |= 0x10;
+                ps->eFlags |= 0x10;
             }
             else
             {
                 (*pm)->trace = (*pm)->trace2;
-                (*pm)->ps->eFlags |= 0x10;
+                ps->eFlags |= 0x10;
                 
                 if (bWasProne == 0)
                 {
                     if ((*pm)->cmd.forwardmove != 0 || (*pm)->cmd.rightmove != 0)
                     {
-                        (*pm)->ps->pm_flags &= ~EF_FIRING;
+                        ps->pm_flags &= ~EF_FIRING;
                         PM_ClearAimDownSightFlag();
                     }
                     
-                    VectorCopy((*pm)->ps->origin, vEnd);
+                    VectorCopy(ps->origin, vEnd);
                     vEnd[2] += 10.0;
                     (*pm)->trace2(
                         &trace,
-                        (*pm)->ps->origin,
+                        ps->origin,
                         (*pm)->mins,
                         (*pm)->maxs,
                         vEnd,
-                        (*pm)->ps->clientNum,
+                        ps->clientNum,
                         (*pm)->tracemask & 0xfdffffff);
 
                     VectorCopy(trace.endpos, vEnd);
@@ -1315,51 +1323,51 @@ void custom_PM_CheckDuck()
                         vEnd,
                         (*pm)->mins,
                         (*pm)->maxs,
-                        (*pm)->ps->origin,
-                        (*pm)->ps->clientNum,
+                        ps->origin,
+                        ps->clientNum,
                         (*pm)->tracemask & 0xfdffffff);
 
-                    VectorCopy(trace.endpos, (*pm)->ps->origin);
+                    VectorCopy(trace.endpos, ps->origin);
 
-                    (*pm)->ps->proneDirection = (*pm)->ps->viewangles[1];
+                    ps->proneDirection = ps->viewangles[1];
 
-                    VectorCopy((*pm)->ps->origin, vPoint);
+                    VectorCopy(ps->origin, vPoint);
                     vPoint[2] -= 0.25;
                     (*pm)->trace2(
                         &trace,
-                        (*pm)->ps->origin,
+                        ps->origin,
                         (*pm)->mins,
                         (*pm)->maxs,
                         vPoint,
-                        (*pm)->ps->clientNum,
+                        ps->clientNum,
                         (*pm)->tracemask & 0xfdffffff);
                     
                     if(trace.startsolid != 0 || trace.fraction >= 1.0)
-                        (*pm)->ps->proneDirectionPitch = 0.0;
+                        ps->proneDirectionPitch = 0.0;
                     else
-                        (*pm)->ps->proneDirectionPitch = PitchForYawOnNormal((*pm)->ps->proneDirection, trace.normal);
+                        ps->proneDirectionPitch = PitchForYawOnNormal(ps->proneDirection, trace.normal);
                 }
 
-                delta = AngleDelta((*pm)->ps->proneDirectionPitch, (*pm)->ps->viewangles[0]);
+                delta = AngleDelta(ps->proneDirectionPitch, ps->viewangles[0]);
                 if (delta < -45.0)
                 {
-                    (*pm)->ps->proneTorsoPitch = (*pm)->ps->viewangles[0] - 45.0;
+                    ps->proneTorsoPitch = ps->viewangles[0] - 45.0;
                 }
                 else if (delta > -45.0)
                 {
-                    (*pm)->ps->proneTorsoPitch = (*pm)->ps->viewangles[0] + 45.0;
+                    ps->proneTorsoPitch = ps->viewangles[0] + 45.0;
                 }
                 else
                 {
-                    (*pm)->ps->proneTorsoPitch = (*pm)->ps->proneDirectionPitch;                    
+                    ps->proneTorsoPitch = ps->proneDirectionPitch;                    
                 }
             }
         }
         else
         {
-            (*pm)->maxs[2] = (*pm)->ps->maxs[2];
-            (*pm)->ps->viewHeightTarget = (*pm)->ps->deadViewHeight;
-            if (((*pm)->ps->pm_flags & PMF_PRONE) == 0)
+            (*pm)->maxs[2] = ps->maxs[2];
+            ps->viewHeightTarget = ps->deadViewHeight;
+            if ((ps->pm_flags & PMF_PRONE) == 0)
             {
                 (*pm)->trace = (*pm)->trace3;
             }
@@ -1367,7 +1375,7 @@ void custom_PM_CheckDuck()
             {
                 (*pm)->trace = (*pm)->trace2;
             }
-            (*pm)->ps->eFlags |= 0x10;
+            ps->eFlags |= 0x10;
             PM_ViewHeightAdjust();
         }
     }
@@ -1430,7 +1438,7 @@ void custom_PM_WalkMove()
     
     ps = (*pm)->ps;
     
-    if ((*pm)->ps->pm_flags & PMF_JUMPING)
+    if (ps->pm_flags & PMF_JUMPING)
     {
         if(customPlayerState[ps->clientNum].protocolVersion != 1)
             Jump_ApplySlowdown(ps);
@@ -1511,12 +1519,14 @@ void custom_PM_WalkMove()
 float custom_PM_GetReducedFriction()
 {
     playerState_t *ps;
+    int clientProtocol;
 
     ps = (*pm)->ps;
+    clientProtocol = customPlayerState[ps->clientNum].protocolVersion;
     
-    if (customPlayerState[ps->clientNum].protocolVersion != 1)
+    if (clientProtocol != 1)
     {
-        if (ps->pm_time < 1700)
+        if(ps->pm_time < 1700)
             return (float)ps->pm_time * 1.5 * 0.00058823527 + 1.0;
         else
             return 2.5;
@@ -1528,12 +1538,14 @@ float custom_PM_GetReducedFriction()
 float custom_PM_GetLandFactor()
 {
     playerState_t *ps;
+    int clientProtocol;
 
     ps = (*pm)->ps;
+    clientProtocol = customPlayerState[ps->clientNum].protocolVersion;
     
-    if (customPlayerState[ps->clientNum].protocolVersion != 1)
+    if (clientProtocol != 1)
     {
-        if (ps->pm_time < 1700)
+        if(ps->pm_time < 1700)
             return (float)ps->pm_time * 1.5 * 0.00058823527 + 1.0;
         else
             return 2.5;
@@ -1653,7 +1665,7 @@ void *custom_Sys_LoadDll(const char *name, char *fqpath, int (**entryPoint)(int,
     ////
 
     hook_call((int)dlsym(libHandle, "vmMain") + 0xF0, (int)hook_ClientCommand);
-#if 0
+#if 1
     hook_jmp((int)dlsym(libHandle, "_init") + 0xD23D, (int)custom_PM_WalkMove);
     hook_jmp((int)dlsym(libHandle, "_init") + 0xBBF1, (int)custom_PM_GetReducedFriction);
     hook_jmp((int)dlsym(libHandle, "_init") + 0xBC52, (int)custom_PM_GetLandFactor);
