@@ -224,10 +224,17 @@ void gsc_testmethod(scr_entref_t ref)
         stackPushUndefined();
         return;
     }
+
+#if 0
+    client_t* client = &svs.clients[id];
+    playerState_t *ps = SV_GameClientNum(id);
+    /*if(ps->pm_flags & 0x10000)
+        printf("##### 0x10000\n");*/
+        
     
-    //client_t* client = &svs.clients[id];
-    //playerState_t *ps = SV_GameClientNum(id);
-    //printf("###### ps->gap_0x380 = %i\n", ps->gap_0x380);
+    
+    
+#endif
         
 
         

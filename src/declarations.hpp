@@ -51,26 +51,27 @@
 #define WBUTTON_PRONE       0x40
 #define WBUTTON_CROUCH      0x80
 
-#define KEY_MASK_FORWARD    127
-#define KEY_MASK_BACK       -127
-#define KEY_MASK_MOVERIGHT  127
-#define KEY_MASK_MOVELEFT   -127
-#define KEY_MASK_JUMP       127 // upmove. prone and jump = -KEY_MASK_JUMP
+#define MOVE_AXIS_MAX   127
+#define KEY_FORWARD     MOVE_AXIS_MAX
+#define KEY_BACK        -KEY_FORWARD
+#define KEY_RIGHT       MOVE_AXIS_MAX
+#define KEY_LEFT        -KEY_RIGHT
+#define KEY_JUMP        MOVE_AXIS_MAX
 
 #define EF_CROUCHING    0x20
 #define EF_PRONE        0x40
-#define EF_ZOOMING      0x200
+#define EF_FIRING       0x400
 #define EF_MG42_ACTIVE  0xC000
 #define EF_TALK         0x40000
 
 #define PMF_PRONE           0x1
 #define PMF_CROUCH          0x2
-#define PMF_DUCKED          PMF_CROUCH
+#define PMF_JUMP_HELD       0x8
 #define PMF_LADDER          0x10
+#define PMF_BACKWARDS_RUN   0x40
 #define PMF_SLIDING         0x100
-#define PMF_RESPAWNED       0x800
+#define PMF_RESPAWNED       0x800 // until BUTTON_ATTACK released
 #define PMF_JUMPING         0x2000
-#define PMF_VIEWLOCKED      0x20000
 #define PMF_DISABLEWEAPON   0x100000
 
 #define JUMP_LAND_SLOWDOWN_TIME 1800
@@ -438,31 +439,29 @@ typedef struct playerState_s
     int stats[6];               // 0xf4
     int ammo[MAX_WEAPONS];      // 0x10c
     int ammoclip[MAX_WEAPONS];  // 0x20c
-    unsigned int weapons[MAX_WEAPONS / (sizeof(int) * 8)]; // 0x30c
+    unsigned int weapons[2];    // 0x30c
     byte weaponslots[8];        // 0x314
-    unsigned int weaponrechamber[MAX_WEAPONS / (sizeof(int) * 8)]; // 0x31c
+    unsigned int weaponrechamber[2]; // 0x31c
     vec3_t mins;                // 0x324
     vec3_t maxs;                // 0x330
     float crouchMaxZ;           // 0x33C
     float crouchViewHeight;     // 0x340
     float standViewHeight;      // 0x344
     float deadViewHeight;       // 0x348
-    float runSpeedScale;        // 0x34c
-    float sprintSpeedScale;     // 0x350
-    byte gap_0x354[0x14];
+    byte gap_0x34C[8];
+    float proneSpeedScale;      // 0x354
+    byte gap_0x358[0x10];
     float proneDirection;       // 0x368
     float proneDirectionPitch;  // 0x36c
     float proneTorsoPitch;      // 0x370
     int viewlocked;             // 0x374
     int viewlocked_entNum;      // 0x378
     float friction;             // 0x37C
-    byte gap_0x380[4];
-    int cursorHint;             // 0x384
-    byte gap_0x388[4];
-    int cursorHintString;       // 0x38c
-    byte gap_0x390[0x28];
-    int cursorHintEntIndex;     // 0x3b8
-    byte gap_0x3BC[4];
+    int gunfx;                  // 0x380
+    int serverCursorHint;       // 0x384
+    int serverCursorHintVal;    // 0x388
+    trace_t serverCursorHintTrace;  // 0x38C
+    int ping;                   // 0x3BC
     int iCompassFriendInfo;     // 0x3C0
     float fTorsoHeight;         // 0x3c4
     float fTorsoPitch;          // 0x3c8
@@ -494,7 +493,7 @@ typedef struct
 
 struct gclient_s
 {
-    playerState_t ps;
+    playerState_t ps; // ent->client + 0x15C (ent[0x57])
     clientSession_t sess;
     //...
 };

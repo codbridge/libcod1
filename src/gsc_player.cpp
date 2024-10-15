@@ -29,7 +29,7 @@ void gsc_player_button_left(scr_entref_t ref)
 
     client_t *client = &svs.clients[id];
 
-    stackPushBool(client->lastUsercmd.rightmove == KEY_MASK_MOVELEFT ? qtrue : qfalse);
+    stackPushBool(client->lastUsercmd.rightmove == KEY_LEFT ? qtrue : qfalse);
 }
 
 void gsc_player_button_right(scr_entref_t ref)
@@ -45,7 +45,7 @@ void gsc_player_button_right(scr_entref_t ref)
 
     client_t *client = &svs.clients[id];
 
-    stackPushBool(client->lastUsercmd.rightmove == KEY_MASK_MOVERIGHT ? qtrue : qfalse);
+    stackPushBool(client->lastUsercmd.rightmove == KEY_RIGHT ? qtrue : qfalse);
 }
 
 void gsc_player_button_forward(scr_entref_t ref)
@@ -61,7 +61,7 @@ void gsc_player_button_forward(scr_entref_t ref)
 
     client_t *client = &svs.clients[id];
 
-    stackPushBool(client->lastUsercmd.forwardmove == KEY_MASK_FORWARD ? qtrue : qfalse);
+    stackPushBool(client->lastUsercmd.forwardmove == KEY_FORWARD ? qtrue : qfalse);
 }
 
 void gsc_player_button_back(scr_entref_t ref)
@@ -77,7 +77,7 @@ void gsc_player_button_back(scr_entref_t ref)
 
     client_t *client = &svs.clients[id];
 
-    stackPushBool(client->lastUsercmd.forwardmove == KEY_MASK_BACK ? qtrue : qfalse);
+    stackPushBool(client->lastUsercmd.forwardmove == KEY_BACK ? qtrue : qfalse);
 }
 
 void gsc_player_button_jump(scr_entref_t ref)
@@ -93,7 +93,7 @@ void gsc_player_button_jump(scr_entref_t ref)
 
     client_t *client = &svs.clients[id];
 
-    stackPushBool(client->lastUsercmd.upmove == KEY_MASK_JUMP ? qtrue : qfalse);
+    stackPushBool(client->lastUsercmd.upmove == KEY_JUMP ? qtrue : qfalse);
 }
 
 void gsc_player_button_leanleft(scr_entref_t ref)

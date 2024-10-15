@@ -1074,9 +1074,9 @@ void custom_PM_CheckDuck()
                             {
                                 //printf("##### & PMF_PRONE) == 0\n");
                                 // here = standing or in air
-                                if (((*pm)->ps->pm_flags & 2) != 0)
+                                if (((*pm)->ps->pm_flags & PMF_CROUCH) != 0)
                                 {
-                                    printf("##### pm_flags & 2) != 0\n");
+                                    printf("##### pm_flags & PMF_CROUCH) != 0\n");
                                     // here = crouch/prone, then stand
                                     (*pm)->maxs[2] = (*pm)->ps->maxs[2];
                                     (*pm)->trace3(
@@ -1093,6 +1093,7 @@ void custom_PM_CheckDuck()
                                     }
                                     else if(((*pm)->cmd.wbuttons & 2) == 0)
                                     {
+                                        printf("##### trace.allsolid\n");
                                         BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_CROUCH, 0, (*pm)->ps);
                                     }
                                 }
@@ -1117,6 +1118,8 @@ void custom_PM_CheckDuck()
                                 }
                                 else
                                 {
+                                    printf("##### trace.allsolid\n");
+
                                     (*pm)->maxs[2] = 50.0;
                                     (*pm)->trace3(
                                         &trace,
@@ -1133,6 +1136,7 @@ void custom_PM_CheckDuck()
                                     }
                                     else if (((*pm)->cmd.wbuttons & 2) == 0)
                                     {
+                                        printf("##### trace.allsolid\n");
                                         BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_PRONE, 0, (*pm)->ps);
                                     }
                                 }
@@ -1165,6 +1169,7 @@ void custom_PM_CheckDuck()
                             }
                             else if(((*pm)->cmd.wbuttons & 2) == 0)
                             {
+                                printf("##### trace.allsolid\n");
                                 BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_PRONE, 0, (*pm)->ps);
                             }
                         }
@@ -1196,7 +1201,7 @@ void custom_PM_CheckDuck()
                             (*pm)->ps->pm_flags |= 0x8000;
                             if (((*pm)->cmd.wbuttons & 2) == 0)
                             {
-                                if (((*pm)->ps->pm_flags & 2) == 0)
+                                if (((*pm)->ps->pm_flags & PMF_CROUCH) == 0)
                                 {
                                     BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_STAND, 0, (*pm)->ps);
                                 }
@@ -1253,7 +1258,7 @@ void custom_PM_CheckDuck()
                         (*pm)->proneChange = 1;
                         BG_PlayAnim((*pm)->ps, 0, ANIM_BP_TORSO, 0, 0, 1, 1);
                     }
-                    else if (((*pm)->ps->pm_flags & 2) == 0)
+                    else if (((*pm)->ps->pm_flags & PMF_CROUCH) == 0)
                     {
                         //printf("##### 2\n");
                         // here = standing
@@ -1300,7 +1305,7 @@ void custom_PM_CheckDuck()
                         (*pm)->proneChange = 1;
                         BG_PlayAnim((*pm)->ps, 0, ANIM_BP_TORSO, 0, 0, 1, 1);
                         // Jump_ActivateSlowdown
-                        (*pm)->ps->pm_flags |= PMF_JUMPING;
+                        (*pm)->ps->pm_flags |= PMF_JUMP_HELD | PMF_JUMPING;
                         (*pm)->ps->pm_time = JUMP_LAND_SLOWDOWN_TIME;
                     }
                 }
@@ -1346,7 +1351,7 @@ void custom_PM_CheckDuck()
                     {
                         // here = go prone while moving and continue moving
                         printf("##### PM_ClearAimDownSightFlag\n");
-                        (*pm)->ps->pm_flags &= ~0x400u;
+                        (*pm)->ps->pm_flags &= ~EF_FIRING;
                         PM_ClearAimDownSightFlag();
                     }
 
@@ -1438,7 +1443,7 @@ vec_t VectorLength(const vec3_t v)
 }
 void Jump_ClearState(playerState_s *ps)
 {
-    ps->pm_flags &= ~0x2000u;
+    ps->pm_flags &= ~PMF_JUMPING;
     ps->jumpOriginZ = 0.0;
 }
 void Jump_ApplySlowdown(playerState_s *ps)
@@ -1489,7 +1494,7 @@ void custom_PM_WalkMove()
     
     ps = (*pm)->ps;
     
-    if ((*pm)->ps->pm_flags & 0x2000)
+    if ((*pm)->ps->pm_flags & PMF_JUMPING)
     {
         if(customPlayerState[ps->clientNum].protocolVersion != 1)
             Jump_ApplySlowdown(ps);
@@ -1542,7 +1547,7 @@ void custom_PM_WalkMove()
             accel = 9.0;
         }
 
-        if(ps->pm_flags & 0x100)
+        if(ps->pm_flags & PMF_SLIDING)
             accel = accel * 0.25;
 
         PM_Accelerate(wishdir, wishspeed, accel);
