@@ -77,6 +77,10 @@
 #define JUMP_LAND_SLOWDOWN_TIME 1800
 #define OVERCLIP 1.001
 
+#define STANCE_EFFECTIVE_STAND  0
+#define STANCE_EFFECTIVE_PRONE  1
+#define STANCE_EFFECTIVE_CROUCH 2
+
 typedef void (*xcommand_t)(void);
 
 typedef unsigned char byte;
