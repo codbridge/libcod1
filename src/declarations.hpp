@@ -405,7 +405,7 @@ typedef struct playerState_s
     int weaponTime;         // 0x2c
     int weaponDelay;        // 0x30
     int grenadeTimeLeft;    // 0x34
-    int foliageSoundTime;   // 0x38
+    int iFoliageSoundTime;  // 0x38
     int gravity;            // 0x3C
     float leanf;            // 0x40
     int speed;              // 0x44
@@ -413,7 +413,7 @@ typedef struct playerState_s
     int groundEntityNum;    // 0x54
     vec3_t vLadderVec;      // [0] = 0x58, [1] = 0x5C, [2] = 0x60
     int jumpTime;           // 0x64
-    float jumpOriginZ;      // 0x68
+    float fJumpOriginZ;     // 0x68
     int legsTimer;          // 0x6C
     int legsAnim;           // 0x70
     int torsoTimer;         // 0x74
@@ -448,13 +448,17 @@ typedef struct playerState_s
     unsigned int weaponrechamber[2]; // 0x31c
     vec3_t mins;                // 0x324
     vec3_t maxs;                // 0x330
-    int crouchMaxZ;             // 0x33C
+    int proneViewHeight;        // 0x33C
     int crouchViewHeight;       // 0x340
     int standViewHeight;        // 0x344
     int deadViewHeight;         // 0x348
-    byte gap_0x34C[8];
+    float walkSpeedScale;       // 0x34C // ADS
+    float runSpeedScale;        // 0x350
     float proneSpeedScale;      // 0x354
-    byte gap_0x358[0x10];
+    float crouchSpeedScale;     // 0x358
+    float strafeSpeedScale;     // 0x35C
+    float backSpeedScale;       // 0x360
+    byte gap_0x364[4];
     float proneDirection;       // 0x368
     float proneDirectionPitch;  // 0x36c
     float proneTorsoPitch;      // 0x370
@@ -464,8 +468,8 @@ typedef struct playerState_s
     int gunfx;                  // 0x380
     int serverCursorHint;       // 0x384
     int serverCursorHintVal;    // 0x388
-    trace_t serverCursorHintTrace;  // 0x38C
-    int ping;                   // 0x3BC
+    trace_t serverCursorHintTrace; // 0x38C
+    byte gap_0x3BC[4];
     int iCompassFriendInfo;     // 0x3C0
     float fTorsoHeight;         // 0x3c4
     float fTorsoPitch;          // 0x3c8

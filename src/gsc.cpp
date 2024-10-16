@@ -212,30 +212,31 @@ int stackGetParamFloat(int param, float *value)
 // For tests
 void gsc_testfunction()
 {
-    printf("##### gsc_testfunction\n");
+
 }
 void gsc_testmethod(scr_entref_t ref)
 {
-    //printf("##### gsc_testmethod\n");
-    int id = ref.entnum;
-    if (id >= MAX_CLIENTS)
-    {
-        stackError("gsc_player_testcommand() entity %i is not a player", id);
-        stackPushUndefined();
-        return;
-    }
-
 #if 0
     client_t* client = &svs.clients[id];
     playerState_t *ps = SV_GameClientNum(id);
     /*if(ps->pm_flags & 0x10000)
         printf("##### 0x10000\n");*/
         
+
     
+    /*printf("##### jumpTime = %i\n", ps->jumpTime);
+    printf("##### fJumpOriginZ = %f\n", ps->fJumpOriginZ);
+    printf("##### clientNum = %i\n", ps->clientNum);
+    printf("##### weapon = %i\n", ps->weapon);*/
+    /*printf("##### viewHeightTarget = %i\n", ps->viewHeightTarget);
+    printf("##### crouchSpeedScale = %f\n", ps->crouchSpeedScale);
+    printf("##### friction = %f\n", ps->friction);
+    printf("##### aimSpreadScale = %f\n", ps->aimSpreadScale);*/
+    //printf("##### deltaTime = %i\n", ps->deltaTime);
+        
+        
     
+
     
 #endif
-        
-
-        
 }
