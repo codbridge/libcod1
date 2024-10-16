@@ -1025,7 +1025,10 @@ void custom_PM_CheckDuck()
         (*pm)->maxs[0] = 8.0;
         (*pm)->maxs[1] = 8.0;
         (*pm)->maxs[2] = 16.0;
-        ps->pm_flags &= 0xFFFFFFFC;
+        if(clientProtocol == 6)
+            ps->pm_flags &= 0xFFFFFFFC;
+        else if(clientProtocol == 1)
+            ps->pm_flags &= 0xFCu;
 
         if (((*pm)->cmd.wbuttons & WBUTTON_PRONE) != 0)
         {
@@ -1074,7 +1077,10 @@ void custom_PM_CheckDuck()
             }
             else if ((((ps->eFlags & 0x8000) != 0 || ps->eFlags & 0x4000) != 0))
             {
-                ps->pm_flags &= 0xFFFFFFFC;
+                if(clientProtocol == 6)
+                    ps->pm_flags &= 0xFFFFFFFC;
+                else if(clientProtocol == 1)
+                    ps->pm_flags &= 0xFCu;
             }
             else
             {
@@ -1091,8 +1097,14 @@ void custom_PM_CheckDuck()
             }
             if (((*pm)->cmd.wbuttons & WBUTTON_PRONE) != 0)
             {
+                float BG_CheckProne_a15;
+                if(clientProtocol == 6)
+                    BG_CheckProne_a15 = 60.0;
+                else if(clientProtocol == 1)
+                    BG_CheckProne_a15 = 0;
+                
                 if ((ps->pm_flags & PMF_PRONE) != 0
-                    || (ps->groundEntityNum != 1023
+                    || ((ps->groundEntityNum != 1023 || clientProtocol == 1)
                     && BG_CheckProne(
                         ps->clientNum,
                         ps->origin,
@@ -1108,14 +1120,22 @@ void custom_PM_CheckDuck()
                         (*pm)->trace3,
                         (*pm)->trace2,
                         0,
-                        60.0)))
+                        BG_CheckProne_a15)))
                 {
                     ps->pm_flags |= PMF_PRONE;
-                    ps->pm_flags &= ~PMF_CROUCH;
+                    if(clientProtocol == 6)
+                        ps->pm_flags &= ~PMF_CROUCH;
                 }
-                else if (ps->groundEntityNum != 1023)
+                else if (ps->groundEntityNum != 1023 || clientProtocol == 1)
                 {
-                    ps->pm_flags |= 0x8000u;
+                    if(clientProtocol == 6)
+                        ps->pm_flags |= 0x8000u;
+                    else if(clientProtocol == 1)
+                    {
+                        ps->pm_flags |= 0x80u;
+                        ps->pm_flags &= ~4u;
+                    }
+                    
                     if (((*pm)->cmd.wbuttons & 2) == 0)
                     {
                         if((ps->pm_flags & PMF_CROUCH) != 0)
@@ -1127,7 +1147,7 @@ void custom_PM_CheckDuck()
             }
             else if (((*pm)->cmd.wbuttons & WBUTTON_CROUCH) != 0)
             {
-                if (ps->pm_flags & PMF_PRONE == 0)
+                if ((ps->pm_flags & PMF_PRONE) == 0)
                 {
                     ps->pm_flags |= PMF_CROUCH;
                 }
