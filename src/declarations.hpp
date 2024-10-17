@@ -3,9 +3,10 @@
 #define qfalse  0
 
 // 3D vectors
-#define DotProduct(a, b)        ((a)[0]*(b)[0]+(a)[1]*(b)[1]+(a)[2]*(b)[2])
+#define DotProduct(a, b)        ((a)[0] * (b)[0] + (a)[1] * (b)[1] + (a)[2] * (b)[2])
 #define VectorCopy(a, b)        ((b)[0] = (a)[0], (b)[1] = (a)[1], (b)[2] = (a)[2])
-#define	VectorScale(v, s, o)    ((o)[0] = (v)[0]*(s), (o)[1] = (v)[1]*(s), (o)[2] = (v)[2]*(s))
+#define VectorMA(v, s, b, o)    ((o)[0] = (v)[0] + (b)[0] * (s), (o)[1] = (v)[1] + (b)[1] * (s), (o)[2] = (v)[2] + (b)[2] * (s))
+#define	VectorScale(v, s, o)    ((o)[0] = (v)[0] * (s), (o)[1] = (v)[1] * (s), (o)[2] = (v)[2] * (s))
 
 #define FLOAT_INT_BITS  13
 #define FLOAT_INT_BIAS  (1 << (FLOAT_INT_BITS - 1)) // 0x1000
@@ -68,6 +69,7 @@
 #define PMF_CROUCH          0x2
 #define PMF_JUMP_HELD       0x8
 #define PMF_LADDER          0x10
+#define PMF_ZOOMING         0x20
 #define PMF_BACKWARDS_RUN   0x40
 #define PMF_SLIDING         0x100
 #define PMF_RESPAWNED       0x800 // until BUTTON_ATTACK released
@@ -390,7 +392,12 @@ typedef enum
 
 typedef enum
 {
-    //...
+    WEAPON_READY = 0x0,
+    WEAPON_RAISING = 0x1,
+    WEAPON_DROPPING = 0x2,
+    WEAPON_FIRING = 0x3,
+    WEAPON_RECHAMBERING = 0x4,
+    WEAPON_RELOADING = 0x5,
 } weaponstate_t;
 
 typedef struct playerState_s
@@ -709,14 +716,20 @@ static const int svs_offset = 0x083ccd80;
 static const int vmpub_offset = 0x0830acc0;
 static const int gvm_offset = 0x080ee804;
 static const int playerStateFields_offset = 0x080dc560;
+static const int entityStateFields_offset = 0x080db860;
 static const int objectiveFields_offset = 0x080e9a80;
+static const int clientStateFields_offset = 0x080dbfe0;
+static const int archivedEntityFields_offset = 0x080dbb80;
 
 #define scrVmPub (*((scrVmPub_t*)(vmpub_offset)))
 #define sv (*((server_t*)(sv_offset)))
 #define svs (*((serverStatic_t*)(svs_offset)))
 #define gvm (*(vm_t**)(gvm_offset))
 #define playerStateFields (*((netField_t*)(playerStateFields_offset)))
+#define entityStateFields (*((netField_t*)(entityStateFields_offset)))
 #define objectiveFields (*((netField_t*)(objectiveFields_offset)))
+#define clientStateFields (*((netField_t*)(clientStateFields_offset)))
+#define archivedEntityFields (*((netField_t*)(archivedEntityFields_offset)))
 
 // Require structure sizes to match
 #if __GNUC__ >= 6

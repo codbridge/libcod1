@@ -158,6 +158,10 @@ typedef void (*PM_StepSlideMove_t)(int gravity);
 typedef void (*PM_SetMovementDir_t)();
 typedef void (*PM_ViewHeightAdjust_t)();
 typedef void (*PM_ClearAimDownSightFlag_t)();
+typedef int (*PM_GroundSurfaceType_t)();
+typedef void (*PM_trace_t)(trace_t *results, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int passEntityNum, int contentMask);
+typedef void (*PM_AddEvent_t)(int newEvent);
+typedef int (*PM_FootstepType_t)(int pm_flags);
 ////
 
 //// Scr

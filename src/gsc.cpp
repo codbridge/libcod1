@@ -217,26 +217,23 @@ void gsc_testfunction()
 void gsc_testmethod(scr_entref_t ref)
 {
 #if 0
+    int id = ref.entnum;
     client_t* client = &svs.clients[id];
     playerState_t *ps = SV_GameClientNum(id);
-    /*if(ps->pm_flags & 0x10000)
-        printf("##### 0x10000\n");*/
-        
-
+    /*if(ps->pm_flags & PMF_ZOOMING)
+        printf("##### PMF_ZOOMING\n");*/
     
-    /*printf("##### jumpTime = %i\n", ps->jumpTime);
-    printf("##### fJumpOriginZ = %f\n", ps->fJumpOriginZ);
-    printf("##### clientNum = %i\n", ps->clientNum);
-    printf("##### weapon = %i\n", ps->weapon);*/
-    /*printf("##### viewHeightTarget = %i\n", ps->viewHeightTarget);
-    printf("##### crouchSpeedScale = %f\n", ps->crouchSpeedScale);
-    printf("##### friction = %f\n", ps->friction);
-    printf("##### aimSpreadScale = %f\n", ps->aimSpreadScale);*/
-    //printf("##### deltaTime = %i\n", ps->deltaTime);
-        
-        
+    
+    /*printf("##### weaponTime = %i\n", ps->weaponTime);
+    printf("##### weaponDelay = %i\n", ps->weaponDelay);
+    printf("##### iFoliageSoundTime = %i\n", ps->iFoliageSoundTime);
+    printf("##### leanf = %f\n", ps->leanf);
+    printf("##### weapon = %i\n", ps->weapon);
+    printf("##### weaponstate = %i\n", ps->weaponstate);*/
+    //printf("##### groundEntityNum = %i\n", ps->groundEntityNum);
     
 
+    
     
 #endif
 }
