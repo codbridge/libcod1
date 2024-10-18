@@ -220,20 +220,10 @@ void gsc_testmethod(scr_entref_t ref)
     int id = ref.entnum;
     client_t* client = &svs.clients[id];
     playerState_t *ps = SV_GameClientNum(id);
-    /*if(ps->pm_flags & PMF_ZOOMING)
-        printf("##### PMF_ZOOMING\n");*/
+    if(ps->pm_flags & 0x10000)
+        printf("##### 0x10000\n");
     
-    
-    /*printf("##### weaponTime = %i\n", ps->weaponTime);
-    printf("##### weaponDelay = %i\n", ps->weaponDelay);
-    printf("##### iFoliageSoundTime = %i\n", ps->iFoliageSoundTime);
-    printf("##### leanf = %f\n", ps->leanf);
-    printf("##### weapon = %i\n", ps->weapon);
-    printf("##### weaponstate = %i\n", ps->weaponstate);*/
-    //printf("##### groundEntityNum = %i\n", ps->groundEntityNum);
-    
-
-    
+    printf("##### weaponTime = %i\n", ps->weaponTime);
     
 #endif
 }

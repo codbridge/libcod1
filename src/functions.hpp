@@ -10,23 +10,28 @@ static const SL_ConvertToString_t SL_ConvertToString = (SL_ConvertToString_t)0x0
 typedef void (*ClientCommand_t)(int clientNum);
 extern ClientCommand_t ClientCommand;
 
-typedef void (*trap_Argv_t)(int arg, char *buffer, int bufferLength);
-
 typedef void (*I_strncpyz_t)(char *dest, const char *src, int destsize);
 static const I_strncpyz_t I_strncpyz = (I_strncpyz_t)0x08085e32;
 
 typedef qboolean (*Sys_IsLANAddress_t)(netadr_t adr);
 static const Sys_IsLANAddress_t Sys_IsLANAddress = (Sys_IsLANAddress_t)0x080d4ebc;
 
-typedef const char * (*PbAuthClient_t)(const char *clientAddress, int cl_punkbuster, const char *PBguid);
-static const PbAuthClient_t PbAuthClient = (PbAuthClient_t)0x080c191c;
+typedef const char * (*PBAuthClient_t)(const char *clientAddress, int cl_punkbuster, const char *PBGuid);
+static const PBAuthClient_t PBAuthClient = (PBAuthClient_t)0x080c191c;
 
 typedef void (*Netchan_Setup_t)(netsrc_t src, netchan_t *chan, netadr_t adr, unsigned int qport);
 static const Netchan_Setup_t Netchan_Setup = (Netchan_Setup_t)0x0808346f;
 
 typedef float (*PitchForYawOnNormal_t)(const float fYaw, const vec3_t normal);
-
 typedef float (*AngleDelta_t)(float angle1, float angle2);
+typedef void (*player_die_t)(gentity_s *self, gentity_s *inflictor, gentity_s *attacker, int damage, int meansOfDeath, int iWeapon, const float *vDir, int hitLoc);
+typedef void (*SetClientViewAngle_t)(gentity_s *ent, const float *angle);
+typedef void (*ClientEndFrame_t)(gentity_s *entity);
+typedef void (*ClientThink_real_t)(gentity_s *ent, usercmd_s *ucmd);
+typedef void (*StopFollowing_t)(gentity_s *ent);
+typedef void (*HudElem_UpdateClient_t)(gclient_s *client, int clientNum, byte which);
+
+typedef vec_t (*VectorNormalize_t)(vec3_t inout);
 ////
 
 //// BG
@@ -37,6 +42,7 @@ typedef int (*BG_CheckProne_t)(
     void (*)(trace_t *, const vec3_t, const vec3_t, const vec3_t, const vec3_t, int, int),
     int proneCheckType, float prone_feet_dist);
 typedef int (*BG_PlayAnim_t)(playerState_s *ps, int animNum, int bodyPart, int forceDuration, qboolean setTimer, qboolean isContinue, qboolean force);
+typedef void (*BG_PlayerStateToEntityState_t)(playerState_s *ps, entityState_s *s, qboolean snap);
 ////
 
 //// Cmd
@@ -45,6 +51,8 @@ static const Cmd_Argv_t Cmd_Argv = (Cmd_Argv_t)0x080600f4;
 
 typedef int (*Cmd_Argc_t)();
 static const Cmd_Argc_t Cmd_Argc = (Cmd_Argc_t)0x080600ea;
+
+typedef int (*Cmd_FollowCycle_f_t)(gentity_s *ent, int dir);
 ////
 
 //// Com
@@ -64,6 +72,14 @@ static const Cvar_Get_t Cvar_Get = (Cvar_Get_t)0x08072a7c;
 
 typedef cvar_t* (*Cvar_FindVar_t)(const char *var_name);
 static const Cvar_FindVar_t Cvar_FindVar = (Cvar_FindVar_t)0x08072916;
+////
+
+//// G
+typedef void (*G_ClientStopUsingTurret_t)(gentity_s *self);
+typedef void (*G_EntUnlink_t)(gentity_s *ent);
+typedef void (*G_SetClientContents_t)(gentity_s *ent);
+typedef void (*G_SetOrigin_t)(gentity_s *ent, const float *origin);
+typedef qboolean (*G_ClientCanSpectateTeam_t)(gclient_s *client, int team);
 ////
 
 //// Info
@@ -125,6 +141,9 @@ static const MSG_ReadDeltaHudElems_t MSG_ReadDeltaHudElems = (MSG_ReadDeltaHudEl
 
 typedef void (*MSG_WriteBigString_t)(msg_t *msg, const char *s);
 static const MSG_WriteBigString_t MSG_WriteBigString = (MSG_WriteBigString_t)0x0807fedb;
+
+typedef void (*MSG_WriteDeltaEntity_t)(msg_t *msg, struct entityState_s *from, struct entityState_s *to, qboolean force);
+static const MSG_WriteDeltaEntity_t MSG_WriteDeltaEntity = (MSG_WriteDeltaEntity_t)0x0808149a;
 ////
 
 //// NET
@@ -142,8 +161,6 @@ static const NET_OutOfBandPrint_t NET_OutOfBandPrint = (NET_OutOfBandPrint_t)0x0
 
 typedef qboolean (*NET_CompareAdr_t)(netadr_t a, netadr_t b);
 static const NET_CompareAdr_t NET_CompareAdr = (NET_CompareAdr_t)0x0808400f;
-
-typedef vec_t (*VectorNormalize_t)(vec3_t inout);
 ////
 
 //// PM
@@ -207,12 +224,6 @@ extern Scr_MakeArray_t Scr_MakeArray;
 typedef void (*Scr_AddArray_t)(void);
 extern Scr_AddArray_t Scr_AddArray;
 
-typedef unsigned int (*Scr_LoadScript_t)(const char *filename);
-
-typedef int (*Scr_GetFunctionHandle_t)(const char* scriptName, const char* labelName);
-
-typedef int (*Scr_IsSystemActive_t)();
-
 typedef short (*Scr_ExecEntThread_t)(gentity_t* ent, int callbackHook, unsigned int numArgs);
 extern Scr_ExecEntThread_t Scr_ExecEntThread;
 
@@ -221,6 +232,11 @@ extern Scr_FreeThread_t Scr_FreeThread;
 
 typedef unsigned short (*Scr_AllocArray_t)(void);
 static const Scr_AllocArray_t Scr_AllocArray = (Scr_AllocArray_t)0x080a5ab4;
+
+typedef unsigned int (*Scr_LoadScript_t)(const char *filename);
+typedef int (*Scr_GetFunctionHandle_t)(const char* scriptName, const char* labelName);
+typedef int (*Scr_IsSystemActive_t)();
+typedef void (*Scr_SetString_t)(uint16_t *to, unsigned int from);
 ////
 
 //// SV
@@ -271,7 +287,11 @@ static const SV_SendMessageToClient_t SV_SendMessageToClient = (SV_SendMessageTo
 
 typedef void (*SV_Netchan_TransmitNextFragment_t)(netchan_t *chan);
 static const SV_Netchan_TransmitNextFragment_t SV_Netchan_TransmitNextFragment = (SV_Netchan_TransmitNextFragment_t)0x080948d0;
+////
 
-typedef void (*MSG_WriteDeltaEntity_t)(msg_t *msg, struct entityState_s *from, struct entityState_s *to, qboolean force);
-static const MSG_WriteDeltaEntity_t MSG_WriteDeltaEntity = (MSG_WriteDeltaEntity_t)0x0808149a;
+//// trap
+typedef void (*trap_Argv_t)(int arg, char *buffer, int bufferLength);
+typedef void (*trap_UnlinkEntity_t)(gentity_t *gEnt);
+typedef void (*trap_GetUsercmd_t)(int clientNum, usercmd_s *cmd);
+typedef int (*trap_GetArchivedClientInfo_t)(int clientNum, int archiveTime, playerState_t *ps, clientState_t *cs);
 ////

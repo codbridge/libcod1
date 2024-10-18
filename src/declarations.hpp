@@ -33,6 +33,7 @@
 #define MAX_HUDELEMENTS             31
 #define MAX_HUDELEMS_ARCHIVAL       MAX_HUDELEMENTS
 #define MAX_HUDELEMS_CURRENT        MAX_HUDELEMENTS
+#define MAX_CVAR_VALUE_STRING       256
 
 #define CVAR_NOFLAG         0           // 0x0000
 #define CVAR_ARCHIVE        (1 << 0)    // 0x0001
@@ -74,6 +75,9 @@
 #define PMF_SLIDING         0x100
 #define PMF_RESPAWNED       0x800 // until BUTTON_ATTACK released
 #define PMF_JUMPING         0x2000
+#define PMF_FROZEN          0x4000
+//#define PMF_SPECTATOR       0x40000
+//#define PMF_FOLLOW          0x80000
 #define PMF_DISABLEWEAPON   0x100000
 
 #define JUMP_LAND_SLOWDOWN_TIME 1800
@@ -82,6 +86,10 @@
 #define STANCE_EFFECTIVE_STAND  0
 #define STANCE_EFFECTIVE_PRONE  1
 #define STANCE_EFFECTIVE_CROUCH 2
+
+typedef float vec_t;
+typedef vec_t vec2_t[2];
+typedef vec_t vec3_t[3];
 
 typedef void (*xcommand_t)(void);
 
@@ -112,7 +120,7 @@ enum svc_ops_e
 
 typedef enum
 {
-    //...
+    ET_INVISIBLE = 7,
 } entityType_t;
 
 typedef enum
@@ -131,6 +139,14 @@ typedef enum
     STATE_SPECTATOR,
     STATE_INTERMISSION
 } sessionState_t;
+
+typedef enum
+{
+    TEAM_FREE = 0,
+    TEAM_AXIS = 1,
+    TEAM_ALLIES = 2,
+    TEAM_NUM_TEAMS = 4,
+} team_t;
 
 typedef enum
 {
@@ -174,10 +190,6 @@ typedef struct
     int bit;
 } msg_t;
 
-typedef float vec_t;
-typedef vec_t vec2_t[2];
-typedef vec_t vec3_t[3];
-
 typedef struct cvar_s
 {
     char *name;
@@ -192,6 +204,17 @@ typedef struct cvar_s
     struct cvar_s *next;
     struct cvar_s *hashNext;
 } cvar_t;
+
+typedef int cvarHandle_t;
+
+typedef struct
+{
+    cvarHandle_t handle;
+    int modificationCount;
+    float value;
+    int integer;
+    char string[MAX_CVAR_VALUE_STRING];
+} vmCvar_t;
 
 union VariableUnion
 {
@@ -216,7 +239,7 @@ typedef struct
     byte gap[356];
     VariableValue *top;
     //...
-} scrVmPub_t; // TODO: verify
+} scrVmPub_t; // TODO
 
 typedef int fileHandle_t;
 typedef void *unzFile;
@@ -225,16 +248,16 @@ typedef void (*xmethod_t)(scr_entref_t);
 
 typedef struct scr_function_s
 {
-    const char      *name;
-    xfunction_t     call;
-    qboolean        developer;
+    const char *name;
+    xfunction_t call;
+    qboolean developer;
 } scr_function_t;
 
 typedef struct scr_method_s
 {
-    const char     *name;
-    xmethod_t      call;
-    qboolean       developer;
+    const char *name;
+    xmethod_t call;
+    qboolean developer;
 } scr_method_t;
 
 typedef enum
@@ -242,6 +265,7 @@ typedef enum
     EV_STANCE_FORCE_STAND = 140,
     EV_STANCE_FORCE_CROUCH = 141,
     EV_STANCE_FORCE_PRONE = 142
+    //...
 } entity_event_t;
 
 typedef struct netField_s
@@ -271,12 +295,12 @@ typedef struct usercmd_s
     byte buttons;   // 0x4  // pm + 8   // console, chat, ads, attack, use
     byte wbuttons;  // 0x5  // pm + 9   // lean left, lean right, reload
     byte weapon;    // 0x6  // pm + 10
-    byte gap0x7;            // pm + 11
+    byte gap_0x7;           // pm + 11
     int angles[3];  // 0x8  // pm + 12  [0] = 0x8, [1] = 0xC, [2] = 0x10
     signed char forwardmove;    // 0x14     // pm + 24
     signed char rightmove;      // 0x15     // pm + 25
     signed char upmove;         // 0x16     // pm + 26
-    byte gap0x17;                           // pm + 27
+    byte gap_0x17;                          // pm + 27
 } usercmd_t;
 
 typedef void netProfileInfo_t;
@@ -322,18 +346,18 @@ typedef struct
 
 typedef struct entityState_s
 {
-    int number;
-    entityType_t eType;
-    int eFlags;
-    trajectory_t pos;
-    trajectory_t apos;
-    int time;
-    int time2;
-    vec3_t origin2;
-    vec3_t angles2;
-    int otherEntityNum;
-    int attackerEntityNum;
-    int groundEntityNum;
+    int number;         // 0x0
+    entityType_t eType; // 0x4
+    int eFlags;         // 0x8
+    trajectory_t pos;   // 0xC
+    trajectory_t apos;  // 0x30
+    int time;           // 0x54
+    int time2;          // 0x58
+    vec3_t origin2;     // 0x5c
+    vec3_t angles2;     // 0x68
+    int otherEntityNum; // 0x74
+    int attackerEntityNum;  // 0x78
+    int groundEntityNum;    // 0x7c
     int constantLight;
     int loopSound;
     int surfType;
@@ -358,6 +382,19 @@ typedef struct entityState_s
     float fWaistPitch;
 } entityState_t;
 
+typedef struct
+{
+    byte linked;        // 0x0  (ent + 240)
+    byte gap_0x1[3];
+    byte svFlags;       // 0x4  (... + 244)
+    byte gap_0x5[0xF];  //      (... + 245)
+    vec3_t mins;        // 0x14 (... + 260)
+    vec3_t maxs;        // 0x20 (... + 272)
+    byte gap_0x2C[0xC];
+    int contents;       // 0x38 (... + 284)
+    byte gap_0x3C[0x30];
+} entityShared_t;
+
 typedef struct objective_s
 {
     int state;
@@ -367,6 +404,11 @@ typedef struct objective_s
     int icon;
 } objective_t;
 
+enum hudelem_update_t
+{
+    HUDELEM_UPDATE_CURRENT = 0x2,
+};
+
 typedef struct hudelem_s
 {
     byte gap[112];
@@ -374,8 +416,8 @@ typedef struct hudelem_s
 
 typedef struct hudElemState_s
 {
-    hudelem_t current[31];
-    hudelem_t archival[31];
+    hudelem_t current[MAX_HUDELEMS_CURRENT];
+    hudelem_t archival[MAX_HUDELEMS_ARCHIVAL];
 } hudElemState_t;
 
 typedef enum
@@ -398,6 +440,7 @@ typedef enum
     WEAPON_FIRING = 0x3,
     WEAPON_RECHAMBERING = 0x4,
     WEAPON_RELOADING = 0x5,
+    //...
 } weaponstate_t;
 
 typedef struct playerState_s
@@ -465,7 +508,7 @@ typedef struct playerState_s
     float crouchSpeedScale;     // 0x358
     float strafeSpeedScale;     // 0x35C
     float backSpeedScale;       // 0x360
-    byte gap_0x364[4];
+    float leanSpeedScale;       // 0x364
     float proneDirection;       // 0x368
     float proneDirectionPitch;  // 0x36c
     float proneTorsoPitch;      // 0x370
@@ -494,30 +537,71 @@ typedef struct playerState_s
 
 typedef struct
 {
-    sessionState_t sessionState;
-    int forceSpectatorClient;
-    int statusIcon;
-    int archiveTime;
-    int score;
-    int deaths;
-    byte gap[4];
-    clientConnected_t connected;
-    usercmd_t cmd;
-    //...
+    int clientIndex;
+    int team;
+    byte gap_0x8[0x54];
+} clientState_t;
+
+typedef struct
+{
+    sessionState_t sessionState;    // 0x0
+    int forceSpectatorClient;       // 0x4
+    int statusIcon;                 // 0x8
+    int archiveTime;                // 0xC
+    int score;                      // 0x10
+    int deaths;                     // 0x14
+    byte gap_0x18[4];
+    clientConnected_t connected;    // 0x1C
+    usercmd_t cmd;                  // 0x20
+    usercmd_t oldcmd;               // 0x38
+    int localClient;                // 0x50
+    int predictItemPickup;          // 0x54
+    byte gap_0x58[0x28];
+    int maxHealth;                  // 0x80
+    byte gap_0x84[0x24];
+    int noSpectate;                 // 0xA8
+    byte gap_0xAC[0x8];
+    clientState_t state;            // 0xB4
 } clientSession_t;
 
 struct gclient_s
 {
-    playerState_t ps; // ent->client + 0x15C (ent[0x57])
-    clientSession_t sess;
-    //...
+    playerState_t ps;       // 0x0 // ent->client + 0x15C (ent[0x57])
+    clientSession_t sess;   // 0x20CC
+    int spectatorClient;    // 0x21DC
+    qboolean noclip;        // 0x21E0
+    qboolean ufo;           // 0x21E4
+    qboolean bFrozen;       // 0x21E8
+    byte gap_0x21F4[0xC];
+    int latched_buttons;    // 0x21F8
+    byte gap_0x21FC[0x8];
+    int latched_wbuttons;   // 0x2204
+    byte gap_0x2208[0xC];
+    float fGunPitch;        // 0x2214
+    float fGunYaw;          // 0x2218
+    byte gap_0x221C[0x20];
+    int inactivityTime;     // 0x223C
+    byte gap_0x2240[0x8C];
 };
 
 struct gentity_s
 {
-    byte gap[348];
-    struct gclient_s *client;
-    byte gap2[444];
+    entityState_t s;        // 0x0
+    entityShared_t r;       // 0xF0
+    struct gclient_s *client;   // 0x15C
+    byte gap_0x160[0x13];
+    byte watertype;         // 0x173
+    byte waterlevel;        // 0x174
+    byte takedamage;        // 0x175
+    byte gap_0x176[0x6];
+    uint16_t classname;     // 0x17c
+    byte gap_0x17E[0x6];
+    int flags;              // 0x184
+    byte gap_0x188[0x10];
+    int clipmask;           // 0x198
+    byte gap_0x19C[0x84];
+    void (*die)(gentity_s *self, gentity_s *inflictor, gentity_s *attacker, int damage, int meansOfDeath, int iWeapon, const float *vDir, int hitLoc); // 0x220
+    byte gap_0x224[0xF8];
 };
 
 typedef struct
@@ -583,7 +667,7 @@ typedef struct client_s
     unsigned short clscriptid;
     int bIsTestClient;
     int serverId;
-    char PBguid[33];
+    char PBGuid[33];
 } client_t;
 
 typedef struct
@@ -610,7 +694,7 @@ typedef struct
     int firstPing;
     qboolean connected;
     int guid;
-    char PBguid[33];
+    char PBGuid[33];
 } challenge_t;
 
 typedef struct
@@ -620,10 +704,19 @@ typedef struct
     int time2;
     int snapFlagServerBit;
     client_t *clients;
-    byte gap_83CCD94[0x4C];
+    byte gap_0x83CCD94[0x4C];
     challenge_t challenges[MAX_CHALLENGES];
     //...
 } serverStatic_t;
+
+typedef struct
+{
+    gclient_t *clients;
+    gentity_t *gentities;
+    byte gap_0x8[0x1E0];
+    int time;
+    //...
+} level_locals_t;
 
 typedef enum
 {
@@ -634,12 +727,12 @@ typedef enum
 
 typedef struct svEntity_s
 {
-    byte gap[8];
+    byte gap_0x0[0x8];
     archivedEntity_t baseline;
     int numClusters; // 0x118
     int clusternums[MAX_ENT_CLUSTERS];
     int lastCluster;
-    byte gap2[24];
+    byte gap[0x18];
 } svEntity_t;
 
 typedef struct
@@ -664,9 +757,7 @@ typedef struct
 
 typedef enum
 {
-    ANIM_BP_UNUSED,
-    ANIM_BP_LEGS,
-    ANIM_BP_TORSO,
+    ANIM_BP_TORSO = 2,
     //...
 } animBodyPart_t;
 
@@ -709,6 +800,13 @@ struct pml_t
     //...
 };
 
+typedef struct
+{
+    byte gap_0x0[0x30];
+    unsigned short player;
+    //...
+} scr_const_t;
+
 extern gentity_t *g_entities;
 
 static const int sv_offset = 0x0836b820;
@@ -733,20 +831,23 @@ static const int archivedEntityFields_offset = 0x080dbb80;
 
 // Require structure sizes to match
 #if __GNUC__ >= 6
-static_assert((sizeof(netchan_t) == 32832), "ERROR: netchan_t size is invalid");
-static_assert((sizeof(client_t) == 371124), "ERROR: client_t size is invalid");
-static_assert((sizeof(playerState_t) == 8396), "ERROR: playerState_t size is invalid");
-static_assert((sizeof(usercmd_t) == 24), "ERROR: usercmd_t size is invalid");
-static_assert((sizeof(netadr_t) == 20), "ERROR: netadr_t size is invalid");
-static_assert((sizeof(gentity_t) == 796), "ERROR: gentity_t size is invalid!");
-static_assert((sizeof(hudElemState_t) == 6944), "ERROR: hudElemState_t size is invalid!");
-static_assert((sizeof(objective_t) == 28), "ERROR: objective_t size is invalid!");
-static_assert((sizeof(trace_t) == 48), "ERROR: trace_t size is invalid!");
-static_assert((sizeof(server_t) == 398636), "ERROR: server_t size is invalid");
-static_assert((sizeof(entityState_t) == 240), "ERROR: entityState_t size is invalid!");
-static_assert((sizeof(svEntity_t) == 380), "ERROR: svEntity_t size is invalid!");
-static_assert((sizeof(archivedEntity_t) == 276), "ERROR: archivedEntity_t size is invalid!");
-static_assert((sizeof(pmove_t) == 252), "ERROR: pmove_t size is invalid!");
+static_assert((sizeof(netchan_t) == 32832), "ERROR: netchan_t size invalid");
+static_assert((sizeof(client_t) == 371124), "ERROR: client_t size invalid");
+static_assert((sizeof(playerState_t) == 8396), "ERROR: playerState_t size invalid");
+static_assert((sizeof(usercmd_t) == 24), "ERROR: usercmd_t size invalid");
+static_assert((sizeof(netadr_t) == 20), "ERROR: netadr_t size invalid");
+static_assert((sizeof(gentity_t) == 796), "ERROR: gentity_t size invalid");
+static_assert((sizeof(hudElemState_t) == 6944), "ERROR: hudElemState_t size invalid");
+static_assert((sizeof(objective_t) == 28), "ERROR: objective_t size invalid");
+static_assert((sizeof(trace_t) == 48), "ERROR: trace_t size invalid");
+static_assert((sizeof(server_t) == 398636), "ERROR: server_t size invalid");
+static_assert((sizeof(entityState_t) == 240), "ERROR: entityState_t size invalid");
+static_assert((sizeof(svEntity_t) == 380), "ERROR: svEntity_t size invalid");
+static_assert((sizeof(archivedEntity_t) == 276), "ERROR: archivedEntity_t size invalid");
+static_assert((sizeof(pmove_t) == 252), "ERROR: pmove_t size invalid");
+static_assert((sizeof(gclient_t) == 8908), "ERROR: gclient_t size invalid");
+static_assert((sizeof(clientSession_t) == 272), "ERROR: clientSession_t size invalid");
+static_assert((sizeof(entityShared_t) == 108), "ERROR: entityShared_t size invalid");
 #endif
 
 
@@ -763,6 +864,6 @@ typedef struct customPlayerState_s
     //// Bot
     int botButtons;
     ////
-    int protocolVersion;
+    int protocol;
 } customPlayerState_t;
 ////
