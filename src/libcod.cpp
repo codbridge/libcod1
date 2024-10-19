@@ -27,6 +27,7 @@ cvar_t *sv_cracked;
 ////
 
 //// Game lib
+void* libHandle;
 // Objects
 gentity_t *g_entities;
 level_locals_t *level;
@@ -96,6 +97,8 @@ Cmd_FollowCycle_f_t Cmd_FollowCycle_f;
 trap_GetArchivedClientInfo_t trap_GetArchivedClientInfo;
 StopFollowing_t StopFollowing;
 HudElem_UpdateClient_t HudElem_UpdateClient;
+AddLeanToPosition_t AddLeanToPosition;
+UnGetLeanFraction_t UnGetLeanFraction;
 ////
 
 //// Callbacks
@@ -104,9 +107,7 @@ int codecallback_playerconnect = 0;
 int codecallback_playerdisconnect = 0;
 int codecallback_playerdamage = 0;
 int codecallback_playerkilled = 0;
-
 int codecallback_playercommand = 0;
-
 callback_t callbacks[] =
 {
     // Stock
@@ -137,31 +138,6 @@ void custom_SV_SpawnServer(char *server)
     hook_SV_SpawnServer->hook();
 }
 
-void custom_GScr_LoadGameTypeScript()
-{
-    hook_GScr_LoadGameTypeScript->unhook();
-    void (*GScr_LoadGameTypeScript)();
-    *(int*)&GScr_LoadGameTypeScript = hook_GScr_LoadGameTypeScript->from;
-    GScr_LoadGameTypeScript();
-    hook_GScr_LoadGameTypeScript->hook();
-
-    unsigned int i;
-    
-    if(*fs_callbacks_additional->string && !Scr_LoadScript(fs_callbacks_additional->string))
-        Com_DPrintf("custom_GScr_LoadGameTypeScript: Scr_LoadScript for fs_callbacks_additional failed.\n");
-
-    for (i = 0; i < sizeof(callbacks) / sizeof(callbacks[0]); i++)
-    {
-        if(callbacks[i].custom)
-            *callbacks[i].pos = Scr_GetFunctionHandle(fs_callbacks_additional->string, callbacks[i].name);
-        else
-            *callbacks[i].pos = Scr_GetFunctionHandle(fs_callbacks->string, callbacks[i].name);
-
-        /*if (*callbacks[i].pos && g_debugCallbacks->integer)
-            Com_Printf("%s found @ %p\n", callbacks[i].name, scrVarPub.programBuffer + *callbacks[i].pos);*/ //TODO: verify scrVarPub_t
-    }
-}
-
 void custom_Com_Init(char *commandLine)
 {
     hook_Com_Init->unhook();
@@ -189,6 +165,31 @@ void custom_Com_Init(char *commandLine)
     fs_callbacks_additional = Cvar_Get("fs_callbacks_additional", "", CVAR_ARCHIVE);
     sv_botHook = Cvar_Get("sv_botHook", "0", CVAR_ARCHIVE);
     sv_cracked = Cvar_Get("sv_cracked", "0", CVAR_ARCHIVE);
+}
+
+void custom_GScr_LoadGameTypeScript()
+{
+    hook_GScr_LoadGameTypeScript->unhook();
+    void (*GScr_LoadGameTypeScript)();
+    *(int*)&GScr_LoadGameTypeScript = hook_GScr_LoadGameTypeScript->from;
+    GScr_LoadGameTypeScript();
+    hook_GScr_LoadGameTypeScript->hook();
+
+    unsigned int i;
+    
+    if(*fs_callbacks_additional->string && !Scr_LoadScript(fs_callbacks_additional->string))
+        Com_DPrintf("custom_GScr_LoadGameTypeScript: Scr_LoadScript for fs_callbacks_additional failed.\n");
+
+    for (i = 0; i < sizeof(callbacks) / sizeof(callbacks[0]); i++)
+    {
+        if(callbacks[i].custom)
+            *callbacks[i].pos = Scr_GetFunctionHandle(fs_callbacks_additional->string, callbacks[i].name);
+        else
+            *callbacks[i].pos = Scr_GetFunctionHandle(fs_callbacks->string, callbacks[i].name);
+
+        /*if (*callbacks[i].pos && g_debugCallbacks->integer)
+            Com_Printf("%s found @ %p\n", callbacks[i].name, scrVarPub.programBuffer + *callbacks[i].pos);*/ //TODO: verify scrVarPub_t
+    }
 }
 
 const char* hook_AuthorizeState(int arg)
@@ -496,13 +497,32 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
     int32_t signedbits;
     uint32_t unsignedbits;
     
-    int clientProtocol = customPlayerState[to->clientNum].protocol;
+    int clientProtocol_to = customPlayerState[to->clientNum].protocol;
+    int clientProtocol_from;
+    bool check = false;
     
     if (!from)
     {
+        //printf("##### custom_MSG_WriteDeltaPlayerstate: from null\n");
         from = &dummy;
         memset(&dummy, 0, sizeof(dummy));
     }
+    else
+    {
+        if (from->clientNum != to->clientNum)
+        {
+            client_t *cl_from = &svs.clients[from->clientNum];
+            client_t *cl_to = &svs.clients[to->clientNum];
+            printf("##### WriteDeltaPlayerstate: from = %s, to = %s\n", cl_from->name, cl_to->name);
+            check = true;
+            clientProtocol_from = customPlayerState[from->clientNum].protocol;
+        }
+        else
+        {
+            //printf("##### WriteDeltaPlayerstate: from is to\n");
+        }
+    }
+    
 
     lc = 0;
     for (i = 0, field = &playerStateFields; i < 0x67; i++, field++)
@@ -555,46 +575,36 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
             }
             else
             {
-                if(!strcmp(field->name, "pm_flags") && clientProtocol == 1)
-                    printf("----- pm_flags start -----\n");
-
                 numBits = abs(field->bits);
-                if(!strcmp(field->name, "pm_flags") && clientProtocol == 1)
+                if(!strcmp(field->name, "pm_flags") && clientProtocol_to == 1)
                     numBits -=2;
                 bitmask = unsignedbits;
-                if (!strcmp(field->name, "pm_flags") && clientProtocol == 1)
+                if (!strcmp(field->name, "pm_flags") && clientProtocol_to == 1 && !check)
                 {
                     bitmask &= ~0x2008; // Fix jump
+                    
                     /*bitmask &= ~0x4000;
                     bitmask &= ~0x10000;*/
                     //bitmask &= ~0x20000;
                     /*bitmask &= ~0x40000;
-                    bitmask &= ~0x80000;
-                    bitmask &= ~0x100000;*/
-
+                    bitmask &= ~0x80000;*/
+                    //bitmask &= ~0x100000;
                     bitmask <<= 1;
                 }
                 
                 abs3bits = numBits & 7;
                 if (abs3bits)
                 {
-                    if(!strcmp(field->name, "pm_flags") && clientProtocol == 1)
-                        printf("#### MSG_WriteBits, bitmask = %i, abs3bits = %i\n", bitmask, abs3bits);
                     MSG_WriteBits(msg, bitmask, abs3bits);
                     numBits -= abs3bits;
                     bitmask >>= abs3bits;
                 }
                 while (numBits)
                 {
-                    if(!strcmp(field->name, "pm_flags") && clientProtocol == 1)
-                        printf("#### MSG_WriteByte, bitmask = %i\n", bitmask);
                     MSG_WriteByte(msg, bitmask);
                     bitmask >>= 8;
                     numBits -= 8;
                 }
-
-                if(!strcmp(field->name, "pm_flags") && clientProtocol == 1)
-                    printf("----- pm_flags end -----\n");
             }
         }
     }
@@ -730,6 +740,656 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
     }
 }
 
+
+
+
+
+
+
+
+
+
+
+/*
+void custom_MSG_ReadDeltaPlayerstate(msg_t *msg, playerState_t *from, playerState_t *to)
+{
+    printf("##### custom_MSG_ReadDeltaPlayerstate\n");
+
+    int i, j, k, lc;
+    netField_t *field;
+    bool print;
+    int *fromF, *toF;
+    playerState_t dummy;
+    int readbits;
+    int readbyte;
+    uint32_t unsignedbits;
+    
+    if (!from)
+    {
+        from = &dummy;
+        memset(&dummy, 0, sizeof(dummy));
+    }
+    *to = *from;
+
+    if (cl_shownet && (cl_shownet->integer > 1 || cl_shownet->integer == -2))
+    {
+        print = true;
+        Com_Printf("%3i: playerstate ", msg->cursize);
+    }
+    else
+    {
+        print = false;
+    }
+
+    lc = MSG_ReadByte(msg);
+    for (i = 0, field = &playerStateFields ; i < lc ; i++, field++)
+    {
+        fromF = (int32_t *)((byte *)from + field->offset);
+        toF = (int32_t *)((byte *)to + field->offset);
+
+        if (!MSG_ReadBit(msg))
+        {
+            *toF = *fromF;
+            continue;
+        }
+        
+        if (!field->bits)
+        {
+            if (MSG_ReadBit(msg))
+            {
+                *toF = MSG_ReadLong(msg);
+                if (print)
+                    Com_Printf("%s:%f ", field->name, *(float *)toF);
+            }
+            else
+            {
+                readbits = MSG_ReadBits(msg, 5);
+                readbyte = 32 * MSG_ReadByte(msg) + readbits - 4096;
+                *(float *)toF = (float)readbyte;
+                if (print)
+                    Com_Printf("%s:%i ", field->name, readbyte);
+            }
+        }
+        else
+        {
+            unsignedbits = (unsigned int)field->bits >> 31;
+            readbits = abs(field->bits);
+
+            if((readbits & 7) != 0)
+                readbyte = MSG_ReadBits(msg, readbits & 7);
+            else
+                readbyte = 0;
+
+            for(k = readbits & 7; k < readbits; k += 8)
+                readbyte |= MSG_ReadByte(msg) << k;
+
+            if(unsignedbits && ((readbyte >> (readbits - 1)) & 1) != 0)
+                readbyte |= ~((1 << readbits) - 1);
+
+            *toF = readbyte;
+
+            if(print)
+                Com_Printf("%s:%i ", field->name, *toF);
+        }
+    }
+
+    for (i = lc, field = &playerStateFields; i < 0x67; i++, field++)
+    {
+        fromF = (int32_t *)((byte *)from + field->offset);
+        toF = (int32_t *)((byte *)to + field->offset);
+
+        *toF = *fromF;
+    }
+    
+    int statsbits = 0;
+    if (MSG_ReadBit(msg))
+    {
+        if (cl_shownet && cl_shownet->integer == 4)
+        {
+            Com_Printf("%s ", "PS_STATS");
+        }
+
+        statsbits = MSG_ReadBits(msg, 6);
+        if((statsbits & 1) != 0)
+            to->stats[0] = MSG_ReadShort(msg);
+        if((statsbits & 2) != 0)
+            to->stats[1] = MSG_ReadShort(msg);
+        if((statsbits & 4) != 0)
+            to->stats[2] = MSG_ReadShort(msg);
+        if((statsbits & 8) != 0)
+            to->stats[3] = MSG_ReadBits(msg, 6);
+        if((statsbits & 0x10) != 0)
+            to->stats[4] = MSG_ReadShort(msg);
+        if((statsbits & 0x20) != 0)
+            to->stats[5] = MSG_ReadByte(msg);
+    }
+
+    int ammobits = 0;
+    if (MSG_ReadBit(msg))
+    {
+        for (i = 0; i < 4; ++i)
+        {
+            if (MSG_ReadBit(msg))
+            {
+                if (cl_shownet && cl_shownet->integer == 4)
+                {
+                    Com_Printf("%s ", "PS_AMMO");
+                }
+
+                ammobits = MSG_ReadShort(msg);
+                for (j = 0; j < 16; ++j)
+                {
+                    if (((ammobits >> j) & 1) != 0)
+                    {
+                        to->ammo[j + 16 * i] = MSG_ReadShort(msg);
+                    }
+                }
+            }
+        }
+    }
+
+    int clipbits = 0;
+    for (i = 0; i < 4; ++i)
+    {
+        if (MSG_ReadBit(msg))
+        {
+            if (cl_shownet && cl_shownet->integer == 4)
+            {
+                Com_Printf("%s ", "PS_AMMOCLIP");
+            }
+
+            clipbits = MSG_ReadShort(msg);
+            for (j = 0; j < 16; ++j)
+            {
+                if (((clipbits >> j) & 1) != 0)
+                {
+                    to->ammoclip[j + 16 * i] = MSG_ReadShort(msg);
+                }
+            }
+        }
+    }
+
+    if (MSG_ReadBit(msg))
+    {
+        for (i = 0; i < MAX_OBJECTIVES; ++i)
+        {
+            to->objective[i].state = MSG_ReadBits(msg, 3);
+            MSG_ReadDeltaObjective(msg, &from->objective[i], &to->objective[i], 6, &objectiveFields);
+        }
+    }
+
+    if (MSG_ReadBit(msg))
+    {
+        MSG_ReadDeltaHudElems(msg, from->hud.archival, to->hud.archival, MAX_HUDELEMS_ARCHIVAL);
+        MSG_ReadDeltaHudElems(msg, from->hud.current, to->hud.current, MAX_HUDELEMS_CURRENT);
+    }
+}
+*/
+
+/*
+// Triggered when killcam
+int custom_MSG_ReadDeltaStruct(msg_t *msg, const clientState_t *from, clientState_t *to, unsigned int number, int numFields, int indexBits, netField_t *stateFields)
+{
+    printf("##### custom_MSG_ReadDeltaStruct\n");
+
+    netField_t *field;
+    int lc;
+    int i;
+    qboolean print;
+
+    if (MSG_ReadBit(msg) == 1)
+    {
+        if (cl_shownet && (cl_shownet->integer > 1 || cl_shownet->integer == -1))
+        {
+            Com_Printf("%3i: #%-3i remove\n", msg->cursize, number);
+        }
+        return 1;
+    }
+    else if (MSG_ReadBit(msg))
+    {
+        lc = MSG_ReadByte(msg);
+        if(lc > numFields)
+            lc = numFields;
+        if (cl_shownet && (cl_shownet->integer > 1 || cl_shownet->integer == -1))
+        {
+            print = qtrue;
+            Com_Printf("%3i: #%-3i ", msg->cursize, to->clientIndex);
+        }
+        else
+        {
+            print = qfalse;
+        }
+
+        *(uint32_t *)to = number;
+        for (i = 0, field = stateFields; i < lc; i++, field++)
+        {
+            MSG_ReadDeltaField(msg, from, to, field, print);
+        }
+
+        for (i = lc, field = &stateFields[lc]; i < numFields; i++, field++)
+        {
+            *(uint32_t *)((byte *)to + field->offset) = *(uint32_t *)((byte *)from + field->offset);
+        }
+        return 0;
+    }
+    else
+    {
+        memcpy(to, from, 4 * numFields + 4);
+        return 0;
+    }
+}
+*/
+
+/*
+void custom_MSG_WriteDeltaStruct(msg_t *msg, const byte *from, const byte *to, qboolean force, int numFields, int indexBits, netField_t *stateFields, qboolean bChangeBit)
+{
+    //printf("##### custom_MSG_WriteDeltaStruct\n");
+    
+    netField_t* field;
+    int lc;
+    int i;
+
+    if (to)
+    {
+
+        bool check = false;
+        entityState_t *s = (entityState_t*)to;
+        int num = s->number;
+        gentity_t *ent = &g_entities[num];
+        gclient_t *client = ent->client;
+        if (client != NULL)
+        {
+            int spectatorClient = client->spectatorClient;
+            if (spectatorClient != -1)
+            {
+                //printf("##### spectatorClient != -1\n");
+                check = true;
+            }
+        }
+        
+
+        lc = 0;
+
+        for (i = 0, field = stateFields; i < numFields; i++, field++)
+        {
+            if (*(uint32_t *)&from[field->offset] != *(uint32_t *)&to[field->offset])
+            {
+                lc = i + 1;
+            }
+        }
+
+        if ( lc )
+        {
+            if ( bChangeBit )
+                MSG_WriteBit1(msg);
+
+            MSG_WriteBits(msg, *(uint32_t *)to, indexBits);
+            MSG_WriteBit0(msg);
+            MSG_WriteBit1(msg);
+            MSG_WriteByte(msg, lc);
+
+            for (i = 0, field = stateFields; i < lc; i++, field++)
+            {
+                MSG_WriteDeltaField(msg, from, to, field);
+            }
+        }
+        else if ( force )
+        {
+            if ( bChangeBit )
+                MSG_WriteBit1(msg);
+
+            MSG_WriteBits(msg, *(uint32_t *)to, indexBits);
+            MSG_WriteBit0(msg);
+            MSG_WriteBit0(msg);
+        }
+    }
+    else
+    {
+
+        if (cl_shownet && (cl_shownet->integer > 1 || cl_shownet->integer == -1))
+        {
+            Com_Printf("W|%3i: #%-3i remove\n", msg->cursize, from);
+        }
+
+        if ( bChangeBit )
+            MSG_WriteBit1(msg);
+
+        MSG_WriteBits(msg, *(uint32_t *)from, indexBits);
+        MSG_WriteBit1(msg);
+    }
+}
+*/
+
+/*cHook *hook_MSG_WriteDeltaEntity;
+void custom_MSG_WriteDeltaEntity(msg_t *msg, entityState_t *from, entityState_t *to, qboolean force)
+{
+    printf("##### custom_MSG_WriteDeltaEntity\n");
+
+    hook_MSG_WriteDeltaEntity->unhook();
+    void (*MSG_WriteDeltaEntity)(msg_t *msg, entityState_t *from, entityState_t *to, qboolean force);
+    *(int*)&MSG_WriteDeltaEntity = hook_MSG_WriteDeltaEntity->from;
+    MSG_WriteDeltaEntity(msg, from, to, force);
+    hook_MSG_WriteDeltaEntity->hook();
+}
+cHook *hook_MSG_WriteDeltaArchivedEntity;
+void custom_MSG_WriteDeltaArchivedEntity(msg_t *msg, archivedEntity_t *from, archivedEntity_t *to, int flags)
+{
+    //printf("##### custom_MSG_WriteDeltaArchivedEntity\n");
+
+    hook_MSG_WriteDeltaArchivedEntity->unhook();
+    void (*MSG_WriteDeltaArchivedEntity)(msg_t *msg, archivedEntity_t *from, archivedEntity_t *to, int flags);
+    *(int*)&MSG_WriteDeltaArchivedEntity = hook_MSG_WriteDeltaArchivedEntity->from;
+    MSG_WriteDeltaArchivedEntity(msg, from, to, flags);
+    hook_MSG_WriteDeltaArchivedEntity->hook();
+}*/
+/*cHook *hook_MSG_WriteDeltaClient;
+void custom_MSG_WriteDeltaClient(msg_t *msg, clientState_t *from, clientState_t *to, qboolean force)
+{
+    printf("##### custom_MSG_WriteDeltaClient\n");
+
+    hook_MSG_WriteDeltaClient->unhook();
+    void (*MSG_WriteDeltaClient)(msg_t *msg, clientState_t *from, clientState_t *to, qboolean force);
+    *(int*)&MSG_WriteDeltaClient = hook_MSG_WriteDeltaClient->from;
+    MSG_WriteDeltaClient(msg, from, to, force);
+    hook_MSG_WriteDeltaClient->hook();
+}*/
+/*cHook *hook_MSG_WriteDeltaStruct;
+void custom_MSG_WriteDeltaStruct(msg_t *msg, const byte *from, const byte *to, qboolean force, int numFields, int indexBits, netField_t *stateFields, qboolean bChangeBit)
+{
+    printf("##### custom_MSG_WriteDeltaStruct\n");
+    hook_MSG_WriteDeltaStruct->unhook();
+    void (*MSG_WriteDeltaStruct)(msg_t *msg, const byte *from, const byte *to, qboolean force, int numFields, int indexBits, netField_t *stateFields, qboolean bChangeBit);
+    *(int*)&MSG_WriteDeltaStruct = hook_MSG_WriteDeltaStruct->from;
+    MSG_WriteDeltaStruct(msg, from, to, force, numFields, indexBits, stateFields, bChangeBit);
+    hook_MSG_WriteDeltaStruct->hook();
+}*/
+
+/*void custom_SV_SendClientSnapshot(client_t *client)
+{
+    byte msg_buf[MAX_MSGLEN];
+    msg_t msg;
+
+    if (client->state == CS_ACTIVE || client->state == CS_ZOMBIE)
+    {
+        SV_BuildClientSnapshot(client);
+    }
+
+    MSG_Init(&msg, msg_buf, sizeof(msg_buf));
+    MSG_WriteLong(&msg, client->lastClientCommand);
+
+    if (client->state == CS_ACTIVE || client->state == CS_ZOMBIE)
+    {
+        SV_UpdateServerCommandsToClient(client, &msg);
+        SV_WriteSnapshotToClient(client, &msg);
+    }
+
+    if (client->state != CS_ZOMBIE)
+    {
+        SV_WriteDownloadToClient(client, &msg);
+    }
+
+    MSG_WriteByte(&msg, svc_EOF);
+
+    if (msg.overflowed)
+    {
+        Com_Printf("WARNING: msg overflowed for %s, trying to recover\n", client->name);
+
+        if (client->state == CS_ACTIVE || client->state == CS_ZOMBIE)
+        {
+            SV_PrintServerCommandsForClient(client);
+
+            MSG_Init(&msg, msg_buf, sizeof(msg_buf));
+            MSG_WriteLong(&msg, client->lastClientCommand);
+
+            SV_UpdateServerCommandsToClient_PreventOverflow(client, &msg, sizeof(msg_buf)); // Not in 1.1
+
+            MSG_WriteByte(&msg, svc_EOF);
+
+            // + MSG_WriteLong + MSG_WriteString in 1.1
+        }
+
+        if (msg.overflowed)
+        {
+            Com_Printf("WARNING: client disconnected for msg overflow: %s\n", client->name);
+            NET_OutOfBandPrint(NS_SERVER, client->netchan.remoteAddress, "disconnect");
+            SV_DropClient(client, "EXE_SERVERMESSAGEOVERFLOW");
+        }
+    }
+
+    SV_SendMessageToClient(&msg, client);
+}
+
+void custom_ClientSpawn(gentity_s *ent, vec3_t spawn_origin, vec3_t spawn_angles)
+{
+    int spawncount;
+    clientSession_t session;
+    int flags;
+    gclient_s *client;
+    int num;
+    int clientProtocol;
+
+    num = ent - g_entities;
+    client = ent->client;
+    clientProtocol = customPlayerState[num].protocol;
+    
+    if((client->ps.pm_flags & 0x20000) != 0 && (client->ps.eFlags & EF_MG42_ACTIVE) != 0)
+        G_ClientStopUsingTurret(&level->gentities[client->ps.viewlocked_entNum]);
+
+    G_EntUnlink(ent);
+
+    if(ent->r.linked)
+        trap_UnlinkEntity(ent);
+
+    ent->s.groundEntityNum = 1023;
+    Scr_SetString(&ent->classname, scr_const->player);
+    ent->clipmask = 42008593;
+    ent->r.svFlags |= 1u;
+    ent->takedamage = 0;
+    G_SetClientContents(ent);
+    ent->die = player_die;
+    ent->waterlevel = 0;
+    ent->watertype = 0;
+    ent->flags = 8192;
+    VectorCopy(*playerMins, ent->r.mins);
+    VectorCopy(*playerMaxs, ent->r.maxs);
+    flags = client->ps.eFlags & 0x20008;
+    memcpy(&session, &client->sess, sizeof(session));
+    spawncount = client->ps.stats[5];
+    memset(client, 0, sizeof(gclient_s));
+    memcpy(&client->sess, &session, sizeof(client->sess));
+    client->spectatorClient = -1;
+    client->ps.stats[5] = spawncount + 1;
+    client->ps.stats[2] = client->sess.maxHealth;
+    client->ps.eFlags = flags;
+    client->ps.eFlags |= 0x10u;
+    client->sess.state.clientIndex = num;
+    client->ps.clientNum = num;
+    trap_GetUsercmd(client - level->clients, &client->sess.cmd);
+    client->ps.eFlags ^= 8u;
+    VectorCopy(ent->r.mins, client->ps.mins);
+    VectorCopy(ent->r.maxs, client->ps.maxs);
+    client->ps.proneViewHeight = bg_viewheight_prone->integer;
+    client->ps.crouchViewHeight = bg_viewheight_crouched->integer;
+    client->ps.standViewHeight = bg_viewheight_standing->integer;
+    client->ps.deadViewHeight = 8;
+    client->ps.viewHeightTarget = bg_viewheight_standing->integer;
+    client->ps.viewHeightCurrent = bg_viewheight_standing->integer;
+    client->ps.viewHeightLerpTime = 0;
+    client->ps.viewHeightLerpPosAdj = 0;
+    client->ps.walkSpeedScale = 0.4;
+    client->ps.runSpeedScale = 1;
+    client->ps.proneSpeedScale = 0.15;
+    client->ps.crouchSpeedScale = 0.65;
+    client->ps.strafeSpeedScale = 0.8;
+    client->ps.backSpeedScale = 0.7;
+    client->ps.leanSpeedScale = 0.4;
+    client->ps.friction = 1;
+    G_SetOrigin(ent, spawn_origin);
+    VectorCopy(spawn_origin, client->ps.origin);
+    if(clientProtocol == 6)
+        client->ps.pm_flags |= 0x800;
+    else if(clientProtocol == 1)
+        client->ps.pm_flags |= 0x8;
+    SetClientViewAngle(ent, spawn_angles);
+    client->inactivityTime = level->time + 1000 * g_inactivity->integer;
+    client->latched_buttons = 0;
+    client->latched_wbuttons = 0;
+    client->sess.cmd.serverTime = level->time;
+    client->ps.commandTime = level->time - 100;
+    ClientEndFrame(ent);
+    ClientThink_real(ent, &client->sess.cmd);
+    BG_PlayerStateToEntityState(&client->ps, &ent->s, qtrue);
+}
+
+void custom_SpectatorClientEndFrame(gentity_s *ent)
+{
+    gclient_s *client;
+    clientState_t cstate;
+    playerState_t pstate;
+    int clientNum;
+    int flags;
+    int num;
+    int clientProtocol;
+
+    num = ent - g_entities;
+    clientProtocol = customPlayerState[num].protocol;
+
+    client = ent->client;
+    
+    if (clientProtocol == 6)
+    {
+        ent->r.svFlags &= ~2u;
+        ent->r.svFlags |= 1u;
+    }
+    else if (clientProtocol == 1)
+    {
+        ent->r.svFlags = (ent->r.svFlags & 0xFC) | 0x01;
+    }
+    ent->takedamage = 0;
+    ent->r.contents = 0;
+    if(clientProtocol == 6)
+        client->ps.pm_flags &= ~0x20000u;
+    else if(clientProtocol == 1)
+        client->ps.pm_flags &= ~4u;
+    ent->s.eType = ET_INVISIBLE;
+    client->ps.viewmodelIndex = 0;
+    client->fGunPitch = 0.0;
+    client->fGunYaw = 0.0;
+
+    if (client->sess.forceSpectatorClient < 0)
+    {
+LABEL_10:
+        if(client->spectatorClient < 0 && (!G_ClientCanSpectateTeam(client, TEAM_NUM_TEAMS) || clientProtocol == 1))
+            Cmd_FollowCycle_f(ent, 1);
+
+        clientNum = client->spectatorClient;
+
+        if (clientNum < 0
+            || (!trap_GetArchivedClientInfo(clientNum, client->sess.archiveTime, &pstate, &cstate))
+            || (!G_ClientCanSpectateTeam(client, cstate.team) || clientProtocol == 1))
+        {
+            StopFollowing(ent);
+            if(clientProtocol == 6)
+                client->ps.pm_flags &= ~0x80000u;
+            else if(clientProtocol == 1)
+                return;
+
+            if (G_ClientCanSpectateTeam(client, TEAM_ALLIES)
+                    || G_ClientCanSpectateTeam(client, TEAM_AXIS)
+                    || G_ClientCanSpectateTeam(client, TEAM_FREE))
+            {
+                client->ps.pm_flags |= 0x40000u;
+            }
+            else
+            {
+                client->ps.pm_flags &= ~0x40000u;
+            }
+            return;
+        }
+    }
+    else
+    {
+        clientNum = client->sess.forceSpectatorClient;
+        client->spectatorClient = clientNum;
+
+        while (1)
+        {
+            if(client->sess.archiveTime < 0)
+                client->sess.archiveTime = 0;
+
+            if (trap_GetArchivedClientInfo(client->sess.forceSpectatorClient, client->sess.archiveTime, &pstate, &cstate)
+                && (G_ClientCanSpectateTeam(client, cstate.team) || clientProtocol == 1))
+            {
+                break;
+            }
+            if (!client->sess.archiveTime)
+            {
+                client->sess.forceSpectatorClient = -1;
+                client->spectatorClient = -1;
+                goto LABEL_10;
+            }
+
+            client->sess.archiveTime -= 50;
+        }
+    }
+
+    flags = (pstate.eFlags & 0xFFFDFFFF) | (client->ps.eFlags & 0x20000);
+
+    memcpy(client, &pstate, sizeof(playerState_t));
+    HudElem_UpdateClient(client, ent->s.number, HUDELEM_UPDATE_CURRENT);
+
+    client->ps.eFlags = flags;
+    if (clientProtocol == 6)
+    {
+        client->ps.pm_flags &= ~0x20000u;
+        client->ps.pm_flags |= 0x10000u;
+    }
+    else if(clientProtocol == 1)
+    {
+        client->ps.pm_flags &= ~4u;
+        client->ps.pm_flags |= 1u;
+    }
+
+    if (client->sess.forceSpectatorClient < 0)
+    {
+        if (clientProtocol == 6)
+        {
+            client->ps.pm_flags |= 0x40000u;
+            if(G_ClientCanSpectateTeam(client, TEAM_NUM_TEAMS))
+                flags = client->ps.pm_flags | 0x80000;
+            else
+                flags = client->ps.pm_flags & 0xFFF7FFFF;
+        }
+        else if (clientProtocol == 1)
+        {
+            flags = client->ps.pm_flags | 2u;
+        }
+        
+        client->ps.pm_flags = flags;
+    }
+    else
+    {
+        if(clientProtocol == 6)
+            client->ps.pm_flags &= 0xFFF3FFFF;
+        else if(clientProtocol == 1)
+            client->ps.pm_flags &= ~2u;
+    }
+}
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void hook_ClientCommand(int clientNum)
 {
     if(!Scr_IsSystemActive())
@@ -806,7 +1466,6 @@ void custom_SV_BotUserMove(client_t *client)
     client->deltaMessage = client->netchan.outgoingSequence - 1;
     SV_ClientThink(client, &ucmd);
 }
-
 
 void custom_PM_CheckDuck()
 {
@@ -1214,9 +1873,9 @@ void Jump_ClearState(playerState_s *ps)
 void Jump_ApplySlowdown(playerState_s *ps)
 {
     float scale;
-
+    
     scale = 1.0;
-
+    
     if (ps->pm_time <= 1800)
     {
         if (!ps->pm_time)
@@ -1383,447 +2042,101 @@ float custom_PM_GetLandFactor()
         return 1.0;
 }
 
-/*void custom_SV_SendClientSnapshot(client_t *client)
+void custom_PM_UpdateLean(playerState_s *ps, usercmd_s *cmd, void (*capsuleTrace)(trace_t *, const vec3_t, const vec3_t, const vec3_t, const vec3_t, int, int))
 {
-    byte msg_buf[MAX_MSGLEN];
-    msg_t msg;
+    float fLeanFrac;
+    float fLean;
+    float fLeanMax;
+    trace_t trace;
+    float leanofs;
+    int leaning;
+    vec3_t tmaxs;
+    vec3_t tmins;
+    vec3_t end;
+    vec3_t start;
+    int stance;
+    int clientProtocol;
 
-    if (client->state == CS_ACTIVE || client->state == CS_ZOMBIE)
+    clientProtocol = customPlayerState[ps->clientNum].protocol;
+
+    leaning = 0;
+    leanofs = 0.0;
+
+    if ((cmd->wbuttons & (WBUTTON_LEANLEFT | WBUTTON_LEANRIGHT)) != 0
+        && (ps->pm_flags & PMF_FROZEN) == 0
+        && ps->pm_type <= PM_INTERMISSION
+        && (ps->groundEntityNum != 1023 || ps->pm_type == PM_NORMAL_LINKED))
     {
-        SV_BuildClientSnapshot(client);
+        if((cmd->wbuttons & WBUTTON_LEANLEFT) != 0)
+            --leaning;
+        if((cmd->wbuttons & WBUTTON_LEANRIGHT) != 0)
+            ++leaning;
     }
 
-    MSG_Init(&msg, msg_buf, sizeof(msg_buf));
-    MSG_WriteLong(&msg, client->lastClientCommand);
+    if((ps->eFlags & EF_MG42_ACTIVE) != 0)
+        leaning = 0;
 
-    if (client->state == CS_ACTIVE || client->state == CS_ZOMBIE)
-    {
-        SV_UpdateServerCommandsToClient(client, &msg);
-        SV_WriteSnapshotToClient(client, &msg);
-    }
-
-    if (client->state != CS_ZOMBIE)
-    {
-        SV_WriteDownloadToClient(client, &msg);
-    }
-
-    MSG_WriteByte(&msg, svc_EOF);
-
-    if (msg.overflowed)
-    {
-        Com_Printf("WARNING: msg overflowed for %s, trying to recover\n", client->name);
-
-        if (client->state == CS_ACTIVE || client->state == CS_ZOMBIE)
-        {
-            SV_PrintServerCommandsForClient(client);
-
-            MSG_Init(&msg, msg_buf, sizeof(msg_buf));
-            MSG_WriteLong(&msg, client->lastClientCommand);
-
-            SV_UpdateServerCommandsToClient_PreventOverflow(client, &msg, sizeof(msg_buf)); // Not in 1.1
-
-            MSG_WriteByte(&msg, svc_EOF);
-
-            // + MSG_WriteLong + MSG_WriteString in 1.1
-        }
-
-        if (msg.overflowed)
-        {
-            Com_Printf("WARNING: client disconnected for msg overflow: %s\n", client->name);
-            NET_OutOfBandPrint(NS_SERVER, client->netchan.remoteAddress, "disconnect");
-            SV_DropClient(client, "EXE_SERVERMESSAGEOVERFLOW");
-        }
-    }
-
-    SV_SendMessageToClient(&msg, client);
-}
-
-void custom_MSG_ReadDeltaPlayerstate(msg_t *msg, playerState_t *from, playerState_t *to)
-{
-    printf("##### custom_MSG_ReadDeltaPlayerstate\n");
-
-    int i, j, k, lc;
-    netField_t *field;
-    bool print;
-    int *fromF, *toF;
-    playerState_t dummy;
-    int readbits;
-    int readbyte;
-    uint32_t unsignedbits;
-    
-    if (!from)
-    {
-        from = &dummy;
-        memset(&dummy, 0, sizeof(dummy));
-    }
-    *to = *from;
-
-    if (cl_shownet && (cl_shownet->integer > 1 || cl_shownet->integer == -2))
-    {
-        print = true;
-        Com_Printf("%3i: playerstate ", msg->cursize);
-    }
+    stance = PM_GetEffectiveStance(ps);
+    if(stance == STANCE_EFFECTIVE_STAND && clientProtocol == 1)
+        fLeanMax = 1.0;
+    else if(stance == STANCE_EFFECTIVE_PRONE)
+        fLeanMax = 0.25;
     else
-    {
-        print = false;
-    }
+        fLeanMax = 0.5;
+    
+    leanofs = ps->leanf;
 
-    lc = MSG_ReadByte(msg);
-    for (i = 0, field = &playerStateFields ; i < lc ; i++, field++)
+    if (leaning)
     {
-        fromF = (int32_t *)((byte *)from + field->offset);
-        toF = (int32_t *)((byte *)to + field->offset);
-
-        if (!MSG_ReadBit(msg))
+        if (leaning <= 0)
         {
-            *toF = *fromF;
-            continue;
-        }
-        
-        if (!field->bits)
-        {
-            if (MSG_ReadBit(msg))
-            {
-                *toF = MSG_ReadLong(msg);
-                if (print)
-                    Com_Printf("%s:%f ", field->name, *(float *)toF);
-            }
-            else
-            {
-                readbits = MSG_ReadBits(msg, 5);
-                readbyte = 32 * MSG_ReadByte(msg) + readbits - 4096;
-                *(float *)toF = (float)readbyte;
-                if (print)
-                    Com_Printf("%s:%i ", field->name, readbyte);
-            }
+            if(leanofs > -fLeanMax)
+                leanofs = leanofs - (float)pml->msec / 350.0 * fLeanMax;
+            if(-fLeanMax > (float)leanofs)
+                leanofs = -fLeanMax;
         }
         else
         {
-            unsignedbits = (unsigned int)field->bits >> 31;
-            readbits = abs(field->bits);
-            if ((readbits & 7) != 0)
-                readbyte = MSG_ReadBits(msg, readbits & 7);
-            else
-                readbyte = 0;
-            for (k = readbits & 7; k < readbits; k += 8)
-                readbyte |= MSG_ReadByte(msg) << k;
-            if (unsignedbits && ((readbyte >> (readbits - 1)) & 1) != 0)
-                readbyte |= ~((1 << readbits) - 1);
-            *toF = readbyte;
-            if (print)
-                Com_Printf("%s:%i ", field->name, *toF);
+            if(fLeanMax > (float)leanofs)
+                leanofs = (float)pml->msec / 350.0 * fLeanMax + leanofs;
+            if(leanofs > (float)fLeanMax)
+                leanofs = fLeanMax;
         }
     }
-
-    for (i = lc, field = &playerStateFields; i < 0x67; i++, field++)
+    else if (leanofs <= 0.0)
     {
-        fromF = (int32_t *)((byte *)from + field->offset);
-        toF = (int32_t *)((byte *)to + field->offset);
-
-        *toF = *fromF;
-    }
-    
-    int statsbits = 0;
-    if (MSG_ReadBit(msg))
-    {
-        if (cl_shownet && cl_shownet->integer == 4)
+        if (leanofs < 0.0)
         {
-            Com_Printf("%s ", "PS_STATS");
-        }
-
-        statsbits = MSG_ReadBits(msg, 6);
-        if((statsbits & 1) != 0)
-            to->stats[0] = MSG_ReadShort(msg);
-        if((statsbits & 2) != 0)
-            to->stats[1] = MSG_ReadShort(msg);
-        if((statsbits & 4) != 0)
-            to->stats[2] = MSG_ReadShort(msg);
-        if((statsbits & 8) != 0)
-            to->stats[3] = MSG_ReadBits(msg, 6);
-        if((statsbits & 0x10) != 0)
-            to->stats[4] = MSG_ReadShort(msg);
-        if((statsbits & 0x20) != 0)
-            to->stats[5] = MSG_ReadByte(msg);
-    }
-
-    int ammobits = 0;
-    if (MSG_ReadBit(msg))
-    {
-        for (i = 0; i < 4; ++i)
-        {
-            if (MSG_ReadBit(msg))
-            {
-                if (cl_shownet && cl_shownet->integer == 4)
-                {
-                    Com_Printf("%s ", "PS_AMMO");
-                }
-
-                ammobits = MSG_ReadShort(msg);
-                for (j = 0; j < 16; ++j)
-                {
-                    if (((ammobits >> j) & 1) != 0)
-                    {
-                        to->ammo[j + 16 * i] = MSG_ReadShort(msg);
-                    }
-                }
-            }
-        }
-    }
-
-    int clipbits = 0;
-    for (i = 0; i < 4; ++i)
-    {
-        if (MSG_ReadBit(msg))
-        {
-            if (cl_shownet && cl_shownet->integer == 4)
-            {
-                Com_Printf("%s ", "PS_AMMOCLIP");
-            }
-
-            clipbits = MSG_ReadShort(msg);
-            for (j = 0; j < 16; ++j)
-            {
-                if (((clipbits >> j) & 1) != 0)
-                {
-                    to->ammoclip[j + 16 * i] = MSG_ReadShort(msg);
-                }
-            }
-        }
-    }
-
-    if (MSG_ReadBit(msg))
-    {
-        for (i = 0; i < MAX_OBJECTIVES; ++i)
-        {
-            to->objective[i].state = MSG_ReadBits(msg, 3);
-            MSG_ReadDeltaObjective(msg, &from->objective[i], &to->objective[i], 6, &objectiveFields);
-        }
-    }
-
-    if (MSG_ReadBit(msg))
-    {
-        MSG_ReadDeltaHudElems(msg, from->hud.archival, to->hud.archival, MAX_HUDELEMS_ARCHIVAL);
-        MSG_ReadDeltaHudElems(msg, from->hud.current, to->hud.current, MAX_HUDELEMS_CURRENT);
-    }
-}
-
-void custom_ClientSpawn(gentity_s *ent, vec3_t spawn_origin, vec3_t spawn_angles)
-{
-    int spawncount;
-    clientSession_t session;
-    int flags;
-    gclient_s *client;
-    int num;
-    int clientProtocol;
-
-    num = ent - g_entities;
-    client = ent->client;
-    clientProtocol = customPlayerState[num].protocol;
-    
-    if((client->ps.pm_flags & 0x20000) != 0 && (client->ps.eFlags & EF_MG42_ACTIVE) != 0)
-        G_ClientStopUsingTurret(&level->gentities[client->ps.viewlocked_entNum]);
-
-    G_EntUnlink(ent);
-
-    if(ent->r.linked)
-        trap_UnlinkEntity(ent);
-
-    ent->s.groundEntityNum = 1023;
-    Scr_SetString(&ent->classname, scr_const->player);
-    ent->clipmask = 42008593;
-    ent->r.svFlags |= 1u;
-    ent->takedamage = 0;
-    G_SetClientContents(ent);
-    ent->die = player_die;
-    ent->waterlevel = 0;
-    ent->watertype = 0;
-    ent->flags = 8192;
-    VectorCopy(*playerMins, ent->r.mins);
-    VectorCopy(*playerMaxs, ent->r.maxs);
-    flags = client->ps.eFlags & 0x20008;
-    memcpy(&session, &client->sess, sizeof(session));
-    spawncount = client->ps.stats[5];
-    memset(client, 0, sizeof(gclient_s));
-    memcpy(&client->sess, &session, sizeof(client->sess));
-    client->spectatorClient = -1;
-    client->ps.stats[5] = spawncount + 1;
-    client->ps.stats[2] = client->sess.maxHealth;
-    client->ps.eFlags = flags;
-    client->ps.eFlags |= 0x10u;
-    client->sess.state.clientIndex = num;
-    client->ps.clientNum = num;
-    trap_GetUsercmd(client - level->clients, &client->sess.cmd);
-    client->ps.eFlags ^= 8u;
-    VectorCopy(ent->r.mins, client->ps.mins);
-    VectorCopy(ent->r.maxs, client->ps.maxs);
-    client->ps.proneViewHeight = bg_viewheight_prone->integer;
-    client->ps.crouchViewHeight = bg_viewheight_crouched->integer;
-    client->ps.standViewHeight = bg_viewheight_standing->integer;
-    client->ps.deadViewHeight = 8;
-    client->ps.viewHeightTarget = bg_viewheight_standing->integer;
-    client->ps.viewHeightCurrent = bg_viewheight_standing->integer;
-    client->ps.viewHeightLerpTime = 0;
-    client->ps.viewHeightLerpPosAdj = 0;
-    client->ps.walkSpeedScale = 0.4;
-    client->ps.runSpeedScale = 1;
-    client->ps.proneSpeedScale = 0.15;
-    client->ps.crouchSpeedScale = 0.65;
-    client->ps.strafeSpeedScale = 0.8;
-    client->ps.backSpeedScale = 0.7;
-    client->ps.leanSpeedScale = 0.4;
-    client->ps.friction = 1;
-    G_SetOrigin(ent, spawn_origin);
-    VectorCopy(spawn_origin, client->ps.origin);
-    if(clientProtocol == 6)
-        client->ps.pm_flags |= 0x800;
-    else if(clientProtocol == 1)
-        client->ps.pm_flags |= 0x8;
-    SetClientViewAngle(ent, spawn_angles);
-    client->inactivityTime = level->time + 1000 * g_inactivity->integer;
-    client->latched_buttons = 0;
-    client->latched_wbuttons = 0;
-    client->sess.cmd.serverTime = level->time;
-    client->ps.commandTime = level->time - 100;
-    ClientEndFrame(ent);
-    ClientThink_real(ent, &client->sess.cmd);
-    BG_PlayerStateToEntityState(&client->ps, &ent->s, qtrue);
-}
-
-void custom_SpectatorClientEndFrame(gentity_s *ent)
-{
-    gclient_s *client;
-    clientState_t cstate;
-    playerState_t pstate;
-    int clientNum;
-    int flags;
-    int num;
-    int clientProtocol;
-
-    num = ent - g_entities;
-    clientProtocol = customPlayerState[num].protocol;
-
-    client = ent->client;
-    
-    if (clientProtocol == 6)
-    {
-        ent->r.svFlags &= ~2u;
-        ent->r.svFlags |= 1u;
-    }
-    else if (clientProtocol == 1)
-    {
-        ent->r.svFlags = (ent->r.svFlags & 0xFC) | 0x01;
-    }
-    ent->takedamage = 0;
-    ent->r.contents = 0;
-    if(clientProtocol == 6)
-        client->ps.pm_flags &= ~0x20000u;
-    else if(clientProtocol == 1)
-        client->ps.pm_flags &= ~4u;
-    ent->s.eType = ET_INVISIBLE;
-    client->ps.viewmodelIndex = 0;
-    client->fGunPitch = 0.0;
-    client->fGunYaw = 0.0;
-
-    if (client->sess.forceSpectatorClient < 0)
-    {
-LABEL_10:
-        if(client->spectatorClient < 0 && (!G_ClientCanSpectateTeam(client, TEAM_NUM_TEAMS) || clientProtocol == 1))
-            Cmd_FollowCycle_f(ent, 1);
-
-        clientNum = client->spectatorClient;
-
-        if (clientNum < 0
-            || (!trap_GetArchivedClientInfo(clientNum, client->sess.archiveTime, &pstate, &cstate))
-            || (!G_ClientCanSpectateTeam(client, cstate.team) || clientProtocol == 1))
-        {
-            StopFollowing(ent);
-            if(clientProtocol == 6)
-                client->ps.pm_flags &= ~0x80000u;
-            else if(clientProtocol == 1)
-                return;
-
-            if (G_ClientCanSpectateTeam(client, TEAM_ALLIES)
-                    || G_ClientCanSpectateTeam(client, TEAM_AXIS)
-                    || G_ClientCanSpectateTeam(client, TEAM_FREE))
-            {
-                client->ps.pm_flags |= 0x40000u;
-            }
-            else
-            {
-                client->ps.pm_flags &= ~0x40000u;
-            }
-            return;
+            leanofs = (float)pml->msec / 280.0 * fLeanMax + leanofs;
+            if(leanofs > 0.0)
+                leanofs = 0.0;
         }
     }
     else
     {
-        clientNum = client->sess.forceSpectatorClient;
-        client->spectatorClient = clientNum;
-
-        while (1)
-        {
-            if(client->sess.archiveTime < 0)
-                client->sess.archiveTime = 0;
-
-            if (trap_GetArchivedClientInfo(client->sess.forceSpectatorClient, client->sess.archiveTime, &pstate, &cstate)
-                && (G_ClientCanSpectateTeam(client, cstate.team) || clientProtocol == 1))
-            {
-                break;
-            }
-            if (!client->sess.archiveTime)
-            {
-                client->sess.forceSpectatorClient = -1;
-                client->spectatorClient = -1;
-                goto LABEL_10;
-            }
-
-            client->sess.archiveTime -= 50;
-        }
+        leanofs = leanofs - (float)pml->msec / 280.0 * fLeanMax;
+        if(leanofs < 0.0)
+            leanofs = 0.0;
     }
 
-    flags = (pstate.eFlags & 0xFFFDFFFF) | (client->ps.eFlags & 0x20000);
+    ps->leanf = leanofs;
 
-    memcpy(client, &pstate, sizeof(playerState_t));
-    HudElem_UpdateClient(client, ent->s.number, HUDELEM_UPDATE_CURRENT);
-
-    client->ps.eFlags = flags;
-    if (clientProtocol == 6)
+    if (ps->leanf != 0.0)
     {
-        client->ps.pm_flags &= ~0x20000u;
-        client->ps.pm_flags |= 0x10000u;
-    }
-    else if(clientProtocol == 1)
-    {
-        client->ps.pm_flags &= ~4u;
-        client->ps.pm_flags |= 1u;
-    }
-
-    if (client->sess.forceSpectatorClient < 0)
-    {
-        if (clientProtocol == 6)
-        {
-            client->ps.pm_flags |= 0x40000u;
-            if(G_ClientCanSpectateTeam(client, TEAM_NUM_TEAMS))
-                flags = client->ps.pm_flags | 0x80000;
-            else
-                flags = client->ps.pm_flags & 0xFFF7FFFF;
-        }
-        else if (clientProtocol == 1)
-        {
-            flags = client->ps.pm_flags | 2u;
-        }
-        
-        client->ps.pm_flags = flags;
-    }
-    else
-    {
-        if(clientProtocol == 6)
-            client->ps.pm_flags &= 0xFFF3FFFF;
-        else if(clientProtocol == 1)
-            client->ps.pm_flags &= ~2u;
+        auto unknown_func = (int (*)(float))((int)dlsym(libHandle, "_init") + 0x15D8A);
+        fLeanFrac = (float)unknown_func(ps->leanf);
+        VectorCopy(ps->origin, start);
+        start[2] = start[2] + ps->viewHeightCurrent;
+        VectorCopy(start, end);
+        AddLeanToPosition(end, ps->viewangles[1], fLeanFrac, 16.0, 20.0);
+        VectorSet(tmins, -8.0, -8.0, -8.0);
+        VectorSet(tmaxs, 8.0, 8.0, 8.0);
+        capsuleTrace(&trace, start, tmins, tmaxs, end, ps->clientNum, 42008593);
+        fLean = UnGetLeanFraction(trace.fraction);
+        if(fabs(ps->leanf) > fLean)
+            ps->leanf = (float)unknown_func(ps->leanf) * fLean;
     }
 }
-*/
 
 void ServerCrash(int sig)
 {
@@ -1856,7 +2169,7 @@ void *custom_Sys_LoadDll(const char *name, char *fqpath, int (**entryPoint)(int,
     hook_Sys_LoadDll->unhook();
     void *(*Sys_LoadDll)(const char *name, char *fqpath, int (**entryPoint)(int, ...), int (*systemcalls)(int, ...));
     *(int*)&Sys_LoadDll = hook_Sys_LoadDll->from;
-    void* libHandle = Sys_LoadDll(name, fqpath, entryPoint, systemcalls);
+    libHandle = Sys_LoadDll(name, fqpath, entryPoint, systemcalls);
     hook_Sys_LoadDll->hook();
 
     //// Unprotect game.mp.i386.so
@@ -1963,20 +2276,27 @@ void *custom_Sys_LoadDll(const char *name, char *fqpath, int (**entryPoint)(int,
     trap_GetArchivedClientInfo = (trap_GetArchivedClientInfo_t)dlsym(libHandle, "trap_GetArchivedClientInfo");
     StopFollowing = (StopFollowing_t)dlsym(libHandle, "StopFollowing");
     HudElem_UpdateClient = (HudElem_UpdateClient_t)dlsym(libHandle, "HudElem_UpdateClient");
+    AddLeanToPosition = (AddLeanToPosition_t)dlsym(libHandle, "AddLeanToPosition");
+    UnGetLeanFraction = (UnGetLeanFraction_t)dlsym(libHandle, "UnGetLeanFraction");
     ////
 
     hook_call((int)dlsym(libHandle, "vmMain") + 0xF0, (int)hook_ClientCommand);
 
-    hook_jmp((int)dlsym(libHandle, "_init") + 0xD23D, (int)custom_PM_WalkMove);
-    hook_jmp((int)dlsym(libHandle, "_init") + 0xBBF1, (int)custom_PM_GetReducedFriction);
-    hook_jmp((int)dlsym(libHandle, "_init") + 0xBC52, (int)custom_PM_GetLandFactor);
 #if 0
     hook_jmp((int)dlsym(libHandle, "_init") + 0x104C4, (int)custom_PM_CheckDuck);
 #endif
-#if 0
-    hook_jmp((int)dlsym(libHandle, "ClientSpawn"), (int)custom_ClientSpawn);
-    hook_jmp((int)dlsym(libHandle, "SpectatorClientEndFrame"), (int)custom_SpectatorClientEndFrame);
-#endif
+    hook_jmp((int)dlsym(libHandle, "_init") + 0xD23D, (int)custom_PM_WalkMove);
+    hook_jmp((int)dlsym(libHandle, "_init") + 0xBBF1, (int)custom_PM_GetReducedFriction);
+    hook_jmp((int)dlsym(libHandle, "_init") + 0xBC52, (int)custom_PM_GetLandFactor);
+    hook_jmp((int)dlsym(libHandle, "PM_UpdateLean"), (int)custom_PM_UpdateLean);
+
+
+    //hook_jmp((int)dlsym(libHandle, "ClientSpawn"), (int)custom_ClientSpawn);
+    //hook_jmp((int)dlsym(libHandle, "SpectatorClientEndFrame"), (int)custom_SpectatorClientEndFrame);
+
+
+
+
 
     hook_GScr_LoadGameTypeScript = new cHook((int)dlsym(libHandle, "GScr_LoadGameTypeScript"), (int)custom_GScr_LoadGameTypeScript);
     hook_GScr_LoadGameTypeScript->hook();
@@ -2018,8 +2338,15 @@ class libcod
         hook_jmp(0x08089e7e, (int)custom_SV_DirectConnect);
         hook_jmp(0x0808ae44, (int)custom_SV_SendClientGameState);
         hook_jmp(0x08081dd3, (int)custom_MSG_WriteDeltaPlayerstate);
-        //hook_jmp(0x08082640, (int)custom_MSG_ReadDeltaPlayerstate);
+
+        
+
         //hook_jmp(0x08097c2f, (int)custom_SV_SendClientSnapshot);
+        //hook_jmp(0x08082640, (int)custom_MSG_ReadDeltaPlayerstate);
+        //hook_jmp(0x0808184d, (int)custom_MSG_ReadDeltaStruct);
+        //hook_jmp(0x080812ca, (int)custom_MSG_WriteDeltaStruct);
+
+
 
         hook_Sys_LoadDll = new cHook(0x080d3cdd, (int)custom_Sys_LoadDll);
         hook_Sys_LoadDll->hook();
@@ -2029,6 +2356,20 @@ class libcod
         hook_SV_BotUserMove->hook();
         hook_SV_SpawnServer = new cHook(0x08090d0f, (int)custom_SV_SpawnServer);
         hook_SV_SpawnServer->hook();
+
+
+        /*hook_MSG_WriteDeltaStruct = new cHook(0x080812ca, (int)custom_MSG_WriteDeltaStruct);
+        hook_MSG_WriteDeltaStruct->hook();
+        hook_MSG_WriteDeltaEntity = new cHook(0x0808149a, (int)custom_MSG_WriteDeltaEntity);
+        hook_MSG_WriteDeltaEntity->hook();
+        hook_MSG_WriteDeltaArchivedEntity = new cHook(0x080814e8, (int)custom_MSG_WriteDeltaArchivedEntity);
+        hook_MSG_WriteDeltaArchivedEntity->hook();*/
+        /*hook_MSG_WriteDeltaClient = new cHook(0x08081536, (int)custom_MSG_WriteDeltaClient);
+        hook_MSG_WriteDeltaClient->hook();*/
+
+
+
+
 
         printf("Loading complete\n");
         printf("-----------------------------------\n");

@@ -7,6 +7,7 @@
 #define VectorCopy(a, b)        ((b)[0] = (a)[0], (b)[1] = (a)[1], (b)[2] = (a)[2])
 #define VectorMA(v, s, b, o)    ((o)[0] = (v)[0] + (b)[0] * (s), (o)[1] = (v)[1] + (b)[1] * (s), (o)[2] = (v)[2] + (b)[2] * (s))
 #define	VectorScale(v, s, o)    ((o)[0] = (v)[0] * (s), (o)[1] = (v)[1] * (s), (o)[2] = (v)[2] * (s))
+#define VectorSet(v, x, y, z)   ((v)[0] = (x), (v)[1] = (y), (v)[2] = (z))
 
 #define FLOAT_INT_BITS  13
 #define FLOAT_INT_BIAS  (1 << (FLOAT_INT_BITS - 1)) // 0x1000
@@ -182,12 +183,12 @@ typedef enum
 
 typedef struct
 {
-    qboolean overflowed;
-    byte *data;
-    int maxsize;
-    int cursize;
-    int readcount;
-    int bit;
+    qboolean overflowed;    // 0x0
+    byte *data;             // 0x4
+    int maxsize;            // 0x8
+    int cursize;            // 0xC
+    int readcount;          // 0x10
+    int bit;                // 0x14
 } msg_t;
 
 typedef struct cvar_s

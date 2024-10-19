@@ -30,8 +30,12 @@ typedef void (*ClientEndFrame_t)(gentity_s *entity);
 typedef void (*ClientThink_real_t)(gentity_s *ent, usercmd_s *ucmd);
 typedef void (*StopFollowing_t)(gentity_s *ent);
 typedef void (*HudElem_UpdateClient_t)(gclient_s *client, int clientNum, byte which);
-
 typedef vec_t (*VectorNormalize_t)(vec3_t inout);
+typedef void (*AddLeanToPosition_t)(float *position, float fViewYaw, float fLeanFrac, float fViewRoll, float fLeanDist);
+typedef float (*UnGetLeanFraction_t)(const float fFrac);
+
+
+
 ////
 
 //// BG
@@ -144,6 +148,12 @@ static const MSG_WriteBigString_t MSG_WriteBigString = (MSG_WriteBigString_t)0x0
 
 typedef void (*MSG_WriteDeltaEntity_t)(msg_t *msg, struct entityState_s *from, struct entityState_s *to, qboolean force);
 static const MSG_WriteDeltaEntity_t MSG_WriteDeltaEntity = (MSG_WriteDeltaEntity_t)0x0808149a;
+
+typedef void (*MSG_ReadDeltaField_t)(msg_t *msg, const clientState_t *from, const clientState_t *to, netField_t *field, qboolean print);
+static const MSG_ReadDeltaField_t MSG_ReadDeltaField = (MSG_ReadDeltaField_t)0x080815AE;
+
+typedef void (*MSG_WriteDeltaField_t)(msg_t *msg, const byte *from, const byte *to, const netField_t *field);
+static const MSG_WriteDeltaField_t MSG_WriteDeltaField = (MSG_WriteDeltaField_t)0x0808102D;
 ////
 
 //// NET
