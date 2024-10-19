@@ -220,10 +220,11 @@ void gsc_testmethod(scr_entref_t ref)
     int id = ref.entnum;
     client_t* client = &svs.clients[id];
     playerState_t *ps = SV_GameClientNum(id);
-    if(ps->pm_flags & 0x10000)
-        printf("##### 0x10000\n");
     
-    printf("##### weaponTime = %i\n", ps->weaponTime);
+    printf("ps->pm_flags = %X\n", ps->pm_flags);
+    
+
+    
     
 #endif
 }

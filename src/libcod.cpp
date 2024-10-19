@@ -502,6 +502,7 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
     
     int clientProtocol_to = customPlayerState[to->clientNum].protocol;
     //int clientProtocol_from;
+    //bool change = true;
     
     if (!from)
     {
@@ -516,6 +517,7 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
             client_t *cl_from = &svs.clients[from->clientNum];
             client_t *cl_to = &svs.clients[to->clientNum];
             printf("##### WriteDeltaPlayerstate: from = %s, to = %s\n", cl_from->name, cl_to->name);
+            //change = false;
         }
         else
         {
@@ -528,10 +530,10 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
     for (i = 0, field = &playerStateFields; i < 0x67; i++, field++)
     {
         fromF = (int *)((byte *)from + field->offset);
-        /*if(clientProtocol == 1 && !strcmp(field->name, "deltaTime"))
+        /*if(clientProtocol_to == 1 && !strcmp(field->name, "deltaTime"))
             toF = (int *)((byte *)to + (field->offset + 4));
-        else*/
-            toF = (int *)((byte *)to + field->offset);
+        else
+            */toF = (int *)((byte *)to + field->offset);
 
         if(*fromF != *toF)
             lc = i + 1;
@@ -542,10 +544,10 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
     for (i = 0, field = &playerStateFields; i < lc; i++, field++)
     {
         fromF = (int *)((byte *)from + field->offset);
-        /*if(clientProtocol == 1 && !strcmp(field->name, "deltaTime"))
+        /*if(clientProtocol_to == 1 && !strcmp(field->name, "deltaTime"))
             toF = (int *)((byte *)to + (field->offset + 4));
-        else*/
-            toF = (int *)((byte *)to + field->offset);
+        else
+            */toF = (int *)((byte *)to + field->offset);
         
         floatbits = *(float *)toF;
         signedbits = *(int32_t *)toF;
@@ -581,23 +583,22 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
                 bitmask = unsignedbits;
                 if (!strcmp(field->name, "pm_flags") && clientProtocol_to == 1)
                 {
-                    bitmask &= ~0x2008;
-
-                    /*if(bitmask & 0x2008)
+                    printf("##### bitmask before: %X\n", bitmask);
+                    if (bitmask & PMF_FOLLOW)
                     {
-                        printf("##### 0x2008\n");
-
+                        bitmask &= ~PMF_FOLLOW;
+                        bitmask |= 0x10000;
                     }
-                    if(bitmask & PMF_JUMP_HELD)
+                    else if (bitmask & PMF_SPECTATOR)
                     {
-                        printf("##### PMF_JUMP_HELD\n");
-
-                    }*/
-
-
-
-
-                    bitmask <<= 1;
+                        bitmask &= ~PMF_SPECTATOR;
+                    }
+                    else
+                    {
+                        bitmask &= ~0x20000;
+                        bitmask |= 0x40000;
+                    }
+                    printf("##### bitmask after:  %X\n", bitmask);
                 }
                 
                 abs3bits = numBits & 7;
@@ -1509,116 +1510,7 @@ void custom_PM_CheckDuck()
     }
 }
 
-void custom_PM_UpdatePronePitch()
-{
-    int bProneOK;
-    playerState_t *ps;
-    float delta;
-    float fTargPitch;
-    int clientProtocol;
-    
-    ps = (*pm)->ps;
-    clientProtocol = customPlayerState[ps->clientNum].protocol;
 
-    if ((ps->pm_flags & PMF_PRONE) != 0)
-    {
-        if (ps->groundEntityNum == 1023)
-        {
-            if (pml->groundPlane)
-            {
-                bProneOK = BG_CheckProne(
-                            ps->clientNum,
-                            ps->origin,
-                            ps->maxs[0],
-                            30.0,
-                            ps->proneDirection,
-                            &ps->fTorsoHeight,
-                            &ps->fTorsoPitch,
-                            &ps->fWaistPitch,
-                            1,
-                            ps->groundEntityNum != 1023,
-                            pml->groundTrace.normal,
-                            (*pm)->trace3,
-                            (*pm)->trace2,
-                            0,
-                            60.0);
-            }
-            else
-            {
-                bProneOK = BG_CheckProne(
-                            ps->clientNum,
-                            ps->origin,
-                            ps->maxs[0],
-                            30.0,
-                            ps->proneDirection,
-                            &ps->fTorsoHeight,
-                            &ps->fTorsoPitch,
-                            &ps->fWaistPitch,
-                            1,
-                            ps->groundEntityNum != 1023,
-                            0,
-                            (*pm)->trace3,
-                            (*pm)->trace2,
-                            0,
-                            60.0);
-            }
-            if (!bProneOK)
-            {
-                BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_CROUCH, 0, ps);
-                if(clientProtocol == 6)
-                    ps->pm_flags |= 0x8000u;
-                else if(clientProtocol == 1)
-                    ps->pm_flags |= 0x80u;
-            }
-        }
-        else if (pml->groundPlane && pml->groundTrace.normal[2] < 0.69999999)
-        {
-            BG_AddPredictableEventToPlayerstate(EV_STANCE_FORCE_CROUCH, 0, ps);
-        }
-
-        if(pml->groundPlane)
-            fTargPitch = PitchForYawOnNormal(ps->proneDirection, pml->groundTrace.normal);
-        else
-            fTargPitch = 0.0;
-
-        delta = AngleDelta(fTargPitch, ps->proneDirectionPitch);
-        if (delta != 0.0)
-        {
-            if(fabs(delta) <= pml->frametime * 70.0)
-                ps->proneDirectionPitch = ps->proneDirectionPitch + delta;
-            else
-            {
-                auto unknown_func = (int (*)(float))((int)dlsym(libHandle, "_init") + 0x15D8A);
-                ps->proneDirectionPitch = (float)unknown_func(delta) * (pml->frametime * 70.0) + ps->proneDirectionPitch;
-            }
-            if(clientProtocol == 6)
-                ps->proneDirectionPitch = AngleNormalize180Accurate(ps->proneDirectionPitch);
-            else if(clientProtocol == 1)
-                ps->proneDirectionPitch = AngleNormalize180(ps->proneDirectionPitch);
-        }
-
-        if(pml->groundPlane)
-            fTargPitch = PitchForYawOnNormal(ps->viewangles[1], pml->groundTrace.normal);
-        else
-            fTargPitch = 0.0;
-
-        delta = AngleDelta(fTargPitch, ps->proneTorsoPitch);
-        if (delta != 0.0)
-        {
-            if(fabs(delta) <= pml->frametime * 70.0)
-                ps->proneTorsoPitch = ps->proneTorsoPitch + delta;
-            else
-            {
-                auto unknown_func = (int (*)(float))((int)dlsym(libHandle, "_init") + 0x15D8A);
-                ps->proneTorsoPitch = (float)unknown_func(delta) * (pml->frametime * 70.0) + ps->proneTorsoPitch;
-            }
-            if(clientProtocol == 6)
-                ps->proneTorsoPitch = AngleNormalize180Accurate(ps->proneTorsoPitch);
-            else if(clientProtocol == 1)
-                ps->proneTorsoPitch = AngleNormalize180(ps->proneTorsoPitch);
-        }
-    }
-}
 
 
 
@@ -1788,7 +1680,7 @@ void *custom_Sys_LoadDll(const char *name, char *fqpath, int (**entryPoint)(int,
 
 
     //hook_jmp((int)dlsym(libHandle, "_init") + 0x104C4, (int)custom_PM_CheckDuck);
-    //hook_jmp((int)dlsym(libHandle, "PM_UpdatePronePitch"), (int)custom_PM_UpdatePronePitch);
+    
 
 
 

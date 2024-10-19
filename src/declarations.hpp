@@ -77,8 +77,8 @@
 #define PMF_RESPAWNED       0x800 // until BUTTON_ATTACK released
 #define PMF_JUMPING         0x2000
 #define PMF_FROZEN          0x4000
-//#define PMF_SPECTATOR       0x40000
-//#define PMF_FOLLOW          0x80000
+#define PMF_SPECTATOR       0x40000
+#define PMF_FOLLOW          0x80000
 #define PMF_DISABLEWEAPON   0x100000
 
 #define JUMP_LAND_SLOWDOWN_TIME 1800
