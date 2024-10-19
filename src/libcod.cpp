@@ -501,12 +501,10 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
     uint32_t unsignedbits;
     
     int clientProtocol_to = customPlayerState[to->clientNum].protocol;
-    //int clientProtocol_from;
-    //bool change = true;
+    int clientProtocol_from = 0;
     
     if (!from)
     {
-        //printf("##### custom_MSG_WriteDeltaPlayerstate: from null\n");
         from = &dummy;
         memset(&dummy, 0, sizeof(dummy));
     }
@@ -517,11 +515,7 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
             client_t *cl_from = &svs.clients[from->clientNum];
             client_t *cl_to = &svs.clients[to->clientNum];
             printf("##### WriteDeltaPlayerstate: from = %s, to = %s\n", cl_from->name, cl_to->name);
-            //change = false;
-        }
-        else
-        {
-            //printf("##### WriteDeltaPlayerstate: from is to\n");
+            clientProtocol_from = customPlayerState[from->clientNum].protocol;
         }
     }
     
@@ -530,10 +524,10 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
     for (i = 0, field = &playerStateFields; i < 0x67; i++, field++)
     {
         fromF = (int *)((byte *)from + field->offset);
-        /*if(clientProtocol_to == 1 && !strcmp(field->name, "deltaTime"))
+        if(clientProtocol_to == 1 && !strcmp(field->name, "deltaTime"))
             toF = (int *)((byte *)to + (field->offset + 4));
         else
-            */toF = (int *)((byte *)to + field->offset);
+            toF = (int *)((byte *)to + field->offset);
 
         if(*fromF != *toF)
             lc = i + 1;
@@ -544,10 +538,10 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
     for (i = 0, field = &playerStateFields; i < lc; i++, field++)
     {
         fromF = (int *)((byte *)from + field->offset);
-        /*if(clientProtocol_to == 1 && !strcmp(field->name, "deltaTime"))
+        if(clientProtocol_to == 1 && !strcmp(field->name, "deltaTime"))
             toF = (int *)((byte *)to + (field->offset + 4));
         else
-            */toF = (int *)((byte *)to + field->offset);
+            toF = (int *)((byte *)to + field->offset);
         
         floatbits = *(float *)toF;
         signedbits = *(int32_t *)toF;
@@ -581,9 +575,23 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
                 if(!strcmp(field->name, "pm_flags") && clientProtocol_to == 1)
                     numBits -=2;
                 bitmask = unsignedbits;
-                if (!strcmp(field->name, "pm_flags") && clientProtocol_to == 1)
+
+                /*if(!strcmp(field->name, "pm_flags") && clientProtocol_to == 6)
+                    printf("##### bitmask: %X\n", bitmask);*/
+
+                if (!strcmp(field->name, "pm_flags") && clientProtocol_from
+                    && clientProtocol_from == 6 && clientProtocol_to == 1)
                 {
                     printf("##### bitmask before: %X\n", bitmask);
+                    if (bitmask == 0xD2000)
+                    {
+                        bitmask &= ~0x2000;
+                    }
+                    printf("##### bitmask after:  %X\n", bitmask);
+                }
+                else if (!strcmp(field->name, "pm_flags") && clientProtocol_to == 1)
+                {
+                    //printf("##### bitmask before: %X\n", bitmask);
                     if (bitmask & PMF_FOLLOW)
                     {
                         bitmask &= ~PMF_FOLLOW;
@@ -598,7 +606,7 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
                         bitmask &= ~0x20000;
                         bitmask |= 0x40000;
                     }
-                    printf("##### bitmask after:  %X\n", bitmask);
+                    //printf("##### bitmask after:  %X\n", bitmask);
                 }
                 
                 abs3bits = numBits & 7;
