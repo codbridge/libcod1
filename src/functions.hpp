@@ -33,9 +33,8 @@ typedef void (*HudElem_UpdateClient_t)(gclient_s *client, int clientNum, byte wh
 typedef vec_t (*VectorNormalize_t)(vec3_t inout);
 typedef void (*AddLeanToPosition_t)(float *position, float fViewYaw, float fLeanFrac, float fViewRoll, float fLeanDist);
 typedef float (*UnGetLeanFraction_t)(const float fFrac);
-
-
-
+typedef float (*AngleNormalize180Accurate_t)(float angle);
+typedef float (*AngleNormalize180_t)(float angle);
 ////
 
 //// BG
@@ -189,6 +188,9 @@ typedef int (*PM_GroundSurfaceType_t)();
 typedef void (*PM_trace_t)(trace_t *results, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int passEntityNum, int contentMask);
 typedef void (*PM_AddEvent_t)(int newEvent);
 typedef int (*PM_FootstepType_t)(int pm_flags);
+typedef float (*PM_GetLandFactor_t)();
+
+
 ////
 
 //// Scr
