@@ -1822,12 +1822,12 @@ void custom_PM_UpdateAimDownSightLerp()
 
             if (ps->fWeaponPosFrac < 1.0)
             {
-                if(ps->fWeaponPosFrac <= 1.0)
+                if(ps->fWeaponPosFrac <= 0.0)
                     ps->fWeaponPosFrac = 0;
             }
             else
             {
-                ps->fWeaponPosFrac = 1065353216;
+                ps->fWeaponPosFrac = 1.0;
             }
         }
     }
