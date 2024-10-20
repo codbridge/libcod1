@@ -524,7 +524,6 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
         /*if(clientProtocol_from != clientProtocol_to)
             printf("---------- from(%i)(%s) - to(%i)(%s) START\n", clientProtocol_from, client_from->name, clientProtocol_to, client_to->name);*/
     }
-    
 
     lc = 0;
     for (i = 0, field = &playerStateFields; i < 0x67; i++, field++)
@@ -596,9 +595,11 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
                 if (!strcmp(field->name, "pm_flags")
                     && clientProtocol_to == 1)
                 {
-                    printf("##### before: %X\n", bitmask);
+                    //printf("##### before: %X\n", bitmask);
                     if(bitmask & PMF_JUMPING)
                         bitmask &= ~PMF_JUMPING;
+                    if(bitmask & PMF_DISABLEWEAPON)
+                        bitmask &= ~PMF_DISABLEWEAPON;
                     if (bitmask & PMF_FOLLOW)
                     {
                         bitmask &= ~PMF_FOLLOW;
@@ -618,7 +619,7 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
                         bitmask &= ~0x10000;
                         bitmask |= 0x30000;
                     }
-                    printf("##### after:  %X\n", bitmask);
+                    //printf("##### after:  %X\n", bitmask);
                 }
                 
                 
