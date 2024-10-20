@@ -216,10 +216,11 @@ void gsc_testfunction()
 }
 void gsc_testmethod(scr_entref_t ref)
 {
-#if 0
+#if 1
     int id = ref.entnum;
     client_t* client = &svs.clients[id];
     playerState_t *ps = SV_GameClientNum(id);
+    gclient_t *gclient = &level->clients[id];
     
     printf("ps->pm_flags = %X\n", ps->pm_flags);
     
