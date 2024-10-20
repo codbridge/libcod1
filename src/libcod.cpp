@@ -1780,10 +1780,10 @@ void custom_PM_UpdateAimDownSightLerp()
     float lerpRate;
     playerState_t *ps;
     bool adsRequested;
-    //int clientProtocol;
+    int clientProtocol;
 
     ps = (*pm)->ps;
-    //clientProtocol = customPlayerState[ps->clientNum].protocol;
+    clientProtocol = customPlayerState[ps->clientNum].protocol;
     
     if (pml->weaponinfo->aimDownSight)
     {
@@ -1798,7 +1798,7 @@ void custom_PM_UpdateAimDownSightLerp()
                 || ps->weaponstate == WEAPON_RELOAD_START
                 || ps->weaponstate == WEAPON_RELOAD_START_INTERUPT
                 || (ps->weaponstate == WEAPON_RELOAD_END && ps->weaponTime - pml->weaponinfo->adsReloadTransTime > 0)))
-            || (!pml->weaponinfo->rechamberWhileAds && ps->weaponstate == WEAPON_RECHAMBERING))
+            || ((!pml->weaponinfo->rechamberWhileAds && clientProtocol != 1) && ps->weaponstate == WEAPON_RECHAMBERING))
         {
             adsRequested = 0;
         }
@@ -1817,7 +1817,6 @@ void custom_PM_UpdateAimDownSightLerp()
             else
                 lerpRate = ps->fWeaponPosFrac - (float)pml->msec * pml->weaponinfo->OOPosAnimLength[1];
 
-            printf("##### lerpRate = %f\n", lerpRate);
             ps->fWeaponPosFrac = lerpRate;
 
             if (ps->fWeaponPosFrac < 1.0)
