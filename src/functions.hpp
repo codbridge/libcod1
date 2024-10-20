@@ -46,6 +46,10 @@ typedef int (*BG_CheckProne_t)(
     int proneCheckType, float prone_feet_dist);
 typedef int (*BG_PlayAnim_t)(playerState_s *ps, int animNum, int bodyPart, int forceDuration, qboolean setTimer, qboolean isContinue, qboolean force);
 typedef void (*BG_PlayerStateToEntityState_t)(playerState_s *ps, entityState_s *s, qboolean snap);
+typedef int (*BG_CheckProneValid_t)(int passEntityNum, const float *const vPos, float fSize, float fHeight, float fYaw, float *pfTorsoHeight, float *pfTorsoPitch, float *pfWaistPitch, int bAlreadyProne, int bOnGround, float *const vGroundNormal,
+    void (*)(trace_t *, const vec3_t, const vec3_t, const vec3_t, const vec3_t, int, int),
+    void (*)(trace_t *, const vec3_t, const vec3_t, const vec3_t, const vec3_t, int, int),
+    int proneCheckType, float prone_feet_dist);
 ////
 
 //// Cmd

@@ -101,6 +101,7 @@ UnGetLeanFraction_t UnGetLeanFraction;
 PM_GetLandFactor_t PM_GetLandFactor;
 AngleNormalize180Accurate_t AngleNormalize180Accurate;
 AngleNormalize180_t AngleNormalize180;
+BG_CheckProneValid_t BG_CheckProneValid;
 ////
 
 //// Callbacks
@@ -501,28 +502,20 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
     int clientProtocol_to = customPlayerState[to->clientNum].protocol;
     int clientProtocol_from = 0;
 
-    client_t *client_to;
-    client_t *client_from;
+    /*client_t *client_to;
+    client_t *client_from;*/
     
     if (!from)
     {
         from = &dummy;
         memset(&dummy, 0, sizeof(dummy));
-
-        client_to = &svs.clients[to->clientNum];
-
-        //printf("---------- to(%i)(%s) START\n", clientProtocol_to, client_to->name);
+        //client_to = &svs.clients[to->clientNum];
     }
     else
     {
-        /*if (from->clientNum != to->clientNum)
-        {
-        }*/
-        client_to = &svs.clients[to->clientNum];
-        client_from = &svs.clients[from->clientNum];
+        /*client_to = &svs.clients[to->clientNum];
+        client_from = &svs.clients[from->clientNum];*/
         clientProtocol_from = customPlayerState[from->clientNum].protocol;
-        /*if(clientProtocol_from != clientProtocol_to)
-            printf("---------- from(%i)(%s) - to(%i)(%s) START\n", clientProtocol_from, client_from->name, clientProtocol_to, client_to->name);*/
     }
 
     lc = 0;
@@ -533,6 +526,26 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
             toF = (int *)((byte *)to + (field->offset + 4));
         else
             */toF = (int *)((byte *)to + field->offset);
+
+
+        /*if (!strcmp(field->name, "deltaTime")
+            && clientProtocol_from
+            && clientProtocol_from == 6 && clientProtocol_to == 1)
+        {
+            toF = (int *)((byte *)to + field->offset + 4);
+            printf("##### toF: %i\n", (unsigned int)(uintptr_t)toF);
+        }*/
+
+
+        /*if (!strcmp(field->name, "deltaTime"))
+        {
+            printf("##### _deltaTime: %i\n", *toF);
+        }*/
+
+
+
+
+
 
         if(*fromF != *toF)
             lc = i + 1;
@@ -547,6 +560,17 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
             toF = (int *)((byte *)to + (field->offset + 4));
         else
             */toF = (int *)((byte *)to + field->offset);
+
+
+        /*if (!strcmp(field->name, "deltaTime"))
+        {
+            printf("##### _ _deltaTime: %i\n", *toF);
+        }*/
+
+
+
+
+
         
         floatbits = *(float *)toF;
         signedbits = *(int32_t *)toF;
@@ -580,16 +604,27 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
                 if(!strcmp(field->name, "pm_flags") && clientProtocol_to == 1)
                     numBits -=2;
                 bitmask = unsignedbits;
-                
-                
-                
+
+
                 /*if (!strcmp(field->name, "pm_flags")
                     && clientProtocol_from
                     && clientProtocol_from == 6 && clientProtocol_to == 1)
                 {
-                    printf("##### bitmask: %X\n", bitmask);
-                }*/
+                    if (bitmask & PMF_FOLLOW)
+                    {
+                        printf("##### bitmask: %X\n", bitmask);
 
+
+
+
+                    }
+                }
+                else if (!strcmp(field->name, "pm_flags")
+                    && clientProtocol_from
+                    && clientProtocol_from == 1 && clientProtocol_to == 6)
+                {
+                    printf("##### 1to6 bitmask: %X\n", bitmask);
+                }*/
 
 
                 if (!strcmp(field->name, "pm_flags")
@@ -609,7 +644,7 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
                     {
                         bitmask &= ~PMF_SPECTATOR;
                     }
-                    else if (bitmask & 0x20000) // Play
+                    else if (bitmask & 0x20000) // Playing
                     {
                         bitmask &= ~0x20000;
                         bitmask |= 0x40000;
@@ -783,7 +818,6 @@ void custom_MSG_ReadDeltaPlayerstate(msg_t *msg, playerState_t *from, playerStat
 {
     int i, j, k, lc;
     netField_t *field;
-    bool print;
     int *fromF, *toF;
     playerState_t dummy;
     int readbits;
@@ -810,6 +844,17 @@ void custom_MSG_ReadDeltaPlayerstate(msg_t *msg, playerState_t *from, playerStat
             *toF = *fromF;
             continue;
         }
+        
+
+        /*if (!strcmp(field->name, "deltaTime"))
+        {
+            printf("##### _toF: %i\n", *toF);
+        }
+        if (!strcmp(field->name, "deltaTime"))
+        {
+            printf("##### fromF: %i\n", *fromF);
+        }*/
+
         
         if (!field->bits)
         {
@@ -843,6 +888,11 @@ void custom_MSG_ReadDeltaPlayerstate(msg_t *msg, playerState_t *from, playerStat
             if(unsignedbits && ((readbyte >> (readbits - 1)) & 1) != 0)
                 readbyte |= ~((1 << readbits) - 1);
 
+            /*if (!strcmp(field->name, "deltaTime"))
+            {
+                printf("##### readbyte: %i\n", readbyte);
+            }*/
+
             *toF = readbyte;
         }
     }
@@ -851,6 +901,11 @@ void custom_MSG_ReadDeltaPlayerstate(msg_t *msg, playerState_t *from, playerStat
     {
         fromF = (int32_t *)((byte *)from + field->offset);
         toF = (int32_t *)((byte *)to + field->offset);
+
+        if (!strcmp(field->name, "deltaTime"))
+        {
+            printf("##### (read) toF: %i\n", *toF);
+        }
         
         *toF = *fromF;
     }
@@ -1282,7 +1337,6 @@ void custom_PM_UpdateLean(playerState_s *ps, usercmd_s *cmd, void (*capsuleTrace
 
 
 
-
 void custom_PM_CheckDuck()
 {
     vec3_t vEnd;
@@ -1683,6 +1737,107 @@ void custom_PM_CheckDuck()
     }
 }
 
+int custom_BG_CheckProne(int passEntityNum, const float *const vPos, float fSize, float fHeight, float fYaw, float * pfTorsoHeight, float * pfTorsoPitch, float * pfWaistPitch, int bAlreadyProne, int bOnGround, float *const vGroundNormal,
+    void (*traceFunc)(trace_t *, const vec3_t, const vec3_t, const vec3_t, const vec3_t, int, int),
+    void (*traceFunc2)(trace_t *, const vec3_t, const vec3_t, const vec3_t, const vec3_t, int, int),
+    int proneCheckType, float prone_feet_dist)
+{
+    if(customPlayerState[passEntityNum].protocol == 1)
+        prone_feet_dist = 0;
+
+    return BG_CheckProneValid(
+        passEntityNum,
+        vPos,
+        fSize,
+        fHeight,
+        fYaw,
+        pfTorsoHeight,
+        pfTorsoPitch,
+        pfWaistPitch,
+        bAlreadyProne,
+        bOnGround,
+        vGroundNormal,
+        traceFunc,
+        traceFunc2,
+        proneCheckType,
+        prone_feet_dist);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+void custom_PM_UpdateAimDownSightLerp()
+{
+    float lerpRate;
+    playerState_t *ps;
+    bool adsRequested;
+    //int clientProtocol;
+
+    ps = (*pm)->ps;
+    //clientProtocol = customPlayerState[ps->clientNum].protocol;
+    
+    if (pml->weaponinfo->aimDownSight)
+    {
+        adsRequested = 0;
+
+        if ((!pml->weaponinfo->segmentedReload
+            && ps->weaponstate == WEAPON_RELOADING
+            && ps->weaponTime - pml->weaponinfo->adsReloadTransTime > 0)
+            || (pml->weaponinfo->segmentedReload
+            && (ps->weaponstate == WEAPON_RELOADING
+                || ps->weaponstate == WEAPON_RELOADING_INTERUPT
+                || ps->weaponstate == WEAPON_RELOAD_START
+                || ps->weaponstate == WEAPON_RELOAD_START_INTERUPT
+                || (ps->weaponstate == WEAPON_RELOAD_END && ps->weaponTime - pml->weaponinfo->adsReloadTransTime > 0)))
+            || (!pml->weaponinfo->rechamberWhileAds && ps->weaponstate == WEAPON_RECHAMBERING))
+        {
+            adsRequested = 0;
+        }
+        else if ((ps->pm_flags & PMF_ZOOMING) != 0)
+        {
+            adsRequested = 1;
+        }
+
+        if(pml->weaponinfo->adsFire && ps->weaponDelay && ps->weaponstate == WEAPON_FIRING)
+            adsRequested = 1;
+
+        if ((adsRequested && ps->fWeaponPosFrac != 1.0) || (!adsRequested && ps->fWeaponPosFrac != 0.0))
+        {
+            if(adsRequested)
+                lerpRate = (float)pml->msec * pml->weaponinfo->OOPosAnimLength[0] + ps->fWeaponPosFrac;
+            else
+                lerpRate = ps->fWeaponPosFrac - (float)pml->msec * pml->weaponinfo->OOPosAnimLength[1];
+
+            printf("##### lerpRate = %f\n", lerpRate);
+            ps->fWeaponPosFrac = lerpRate;
+
+            if (ps->fWeaponPosFrac < 1.0)
+            {
+                if(ps->fWeaponPosFrac <= 1.0)
+                    ps->fWeaponPosFrac = 0;
+            }
+            else
+            {
+                ps->fWeaponPosFrac = 1065353216;
+            }
+        }
+    }
+    else
+    {
+        ps->fWeaponPosFrac = 0.0;
+    }
+}
+
+
 
 
 
@@ -1838,6 +1993,7 @@ void *custom_Sys_LoadDll(const char *name, char *fqpath, int (**entryPoint)(int,
     PM_GetLandFactor = (PM_GetLandFactor_t)((int)dlsym(libHandle, "_init") + 0xBC52);
     AngleNormalize180Accurate = (AngleNormalize180Accurate_t)dlsym(libHandle, "AngleNormalize180Accurate");
     AngleNormalize180 = (AngleNormalize180_t)dlsym(libHandle, "AngleNormalize180");
+    BG_CheckProneValid = (BG_CheckProneValid_t)dlsym(libHandle, "BG_CheckProneValid");
     ////
 
     hook_call((int)dlsym(libHandle, "vmMain") + 0xF0, (int)hook_ClientCommand);
@@ -1848,10 +2004,17 @@ void *custom_Sys_LoadDll(const char *name, char *fqpath, int (**entryPoint)(int,
     hook_jmp((int)dlsym(libHandle, "PM_UpdateLean"), (int)custom_PM_UpdateLean);
 
 
+    hook_jmp((int)dlsym(libHandle, "PM_UpdateAimDownSightLerp"), (int)custom_PM_UpdateAimDownSightLerp);
+
+
+    
+
+
 
 
 
     //hook_jmp((int)dlsym(libHandle, "_init") + 0x104C4, (int)custom_PM_CheckDuck);
+    //hook_jmp((int)dlsym(libHandle, "BG_CheckProne"), (int)custom_BG_CheckProne);
     
 
 

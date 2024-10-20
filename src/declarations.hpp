@@ -441,6 +441,10 @@ typedef enum
     WEAPON_FIRING = 0x3,
     WEAPON_RECHAMBERING = 0x4,
     WEAPON_RELOADING = 0x5,
+    WEAPON_RELOADING_INTERUPT = 0x6,
+    WEAPON_RELOAD_START = 0x7,
+    WEAPON_RELOAD_START_INTERUPT = 0x8,
+    WEAPON_RELOAD_END = 0x9,
     //...
 } weaponstate_t;
 
@@ -756,6 +760,43 @@ typedef struct
     char gametype[MAX_QPATH];
 } server_t;
 
+typedef struct weaponinfo_t
+{
+    int number;             // 0x0
+    char* name;             // 0x4
+    char* displayName;      // 0x8
+    byte gap_0xC[0x1E4];
+    int reloadAddTime;      // 0x1F0
+    byte gap_0x1F4[0x1C];
+    int fuseTime;           // 0x210
+    float moveSpeedScale;   // 0x214
+    float adsZoomFov;       // 0x218
+    float adsZoomInFrac;    // 0x21C
+    float adsZoomOutFrac;   // 0x220
+    byte gap_0x224[0x44];
+    int adsTransInTime;     // 0x268
+    int adsTransOutTime;    // 0x26C
+    byte gap_0x270[0x8];
+    float idleCrouchFactor; // 0x278
+    float idleProneFactor;  // 0x27C
+    byte gap_0x280[0x4C];
+    int aimDownSight;       // 0x2CC
+    int rechamberWhileAds;  // 0x2D0
+    float adsViewErrorMin;  // 0x2D4
+    float adsViewErrorMax;  // 0x2D8
+    int cookOffHold;        // 0x2DC
+    int clipOnly;           // 0x2E0
+    byte gap_0x2E4[0x4];
+    int adsFire;            // 0x2E8
+    byte gap_0x2EC[0xC];
+    int segmentedReload;    // 0x2F8
+    byte gap_0x2FC[0xE4];
+    int adsReloadTransTime; // 0x3E0
+    byte gap_0x3E4[0x44];
+    float OOPosAnimLength[2];   // 0x428
+    //...
+} weaponinfo_t;
+
 typedef enum
 {
     ANIM_BP_TORSO = 2,
@@ -788,16 +829,18 @@ typedef struct
 
 struct pml_t
 {
-    vec3_t forward;     // 0x0
-    vec3_t right;       // 0xC
-    vec3_t up;          // 0x18
-    float frametime;    // 0x24
-    int msec;           // 0x28
-    int walking;        // 0x2C
-    int groundPlane;    // 0x30
+    vec3_t forward;         // 0x0
+    vec3_t right;           // 0xC
+    vec3_t up;              // 0x18
+    float frametime;        // 0x24
+    int msec;               // 0x28
+    int walking;            // 0x2C
+    int groundPlane;        // 0x30
     int almostGroundPlane;  // 0x34
     trace_t groundTrace;    // 0x38
     float impactSpeed;      // 0x68
+    byte gap_0x6C[0x1C];
+    weaponinfo_t *weaponinfo;   // 0x88
     //...
 };
 
@@ -810,6 +853,7 @@ typedef struct
 
 extern gentity_t *g_entities;
 extern level_locals_t *level;
+extern pml_t *pml;
 
 static const int sv_offset = 0x0836b820;
 static const int svs_offset = 0x083ccd80;
