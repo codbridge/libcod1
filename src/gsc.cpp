@@ -223,8 +223,6 @@ void gsc_testmethod(scr_entref_t ref)
     gclient_t *gclient = &level->clients[id];
     
     
-    printf("ps->weaponTime = %i\n", ps->weaponTime);
-    printf("ps->weaponDelay = %i\n", ps->weaponDelay);
     
     
 #endif

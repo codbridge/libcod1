@@ -125,6 +125,7 @@ callback_t callbacks[] =
 ////
 
 customPlayerState_t customPlayerState[MAX_CLIENTS];
+std::map<std::string, std::map<int, customWeaponinfo>> customWeaponinfo;
 
 cHook *hook_Com_Init;
 cHook *hook_GScr_LoadGameTypeScript;
@@ -139,6 +140,18 @@ void custom_SV_SpawnServer(char *server)
     *(int*)&SV_SpawnServer = hook_SV_SpawnServer->from;
     SV_SpawnServer(server);
     hook_SV_SpawnServer->hook();
+
+    if (customWeaponinfo.empty())
+    {
+        customWeaponinfo["kar98k_sniper_mp"][6] = { 199, 449, 0.1, 0.6, 0.2, 0, 1.2, 1.4 };
+        customWeaponinfo["kar98k_sniper_mp"][1] = { 199, 299, 0.42, 0.2, 0.085, 1, 0, 0 };
+
+        customWeaponinfo["mosin_nagant_sniper_mp"][6] = { 1339, 449, 0.1, 0.6, 0.2, 0, 1.2, 1.4 };
+        customWeaponinfo["mosin_nagant_sniper_mp"][1] = { 339, 299, 0.42, 0.2, 0.085, 1, 0, 0 };
+
+        customWeaponinfo["springfield_mp"][6] = { 199, 449, 0.1, 0.6, 0.2, 0, 1.2, 1.4 };
+        customWeaponinfo["springfield_mp"][1] = { 199, 299, 0.05, 0.2, 0.085, 1, 0, 0 };
+    }
 }
 
 void custom_Com_Init(char *commandLine)
@@ -1812,8 +1825,24 @@ void custom_PM_UpdateAimDownSightLerp()
 
         if ((adsRequested && ps->fWeaponPosFrac != 1.0) || (!adsRequested && ps->fWeaponPosFrac != 0.0))
         {
+            float OOPosAnimLength_in;
+            OOPosAnimLength_in = pml->weaponinfo->OOPosAnimLength[0];
+            if (clientProtocol == 1)
+            {
+                auto weaponIt = customWeaponinfo.find(pml->weaponinfo->name);
+                if (weaponIt != customWeaponinfo.end())
+                {
+                    auto versionIt = weaponIt->second.find(clientProtocol);
+                    if (versionIt != weaponIt->second.end())
+                    {
+                        float adsTransInTime = versionIt->second.adsTransInTime;
+                        OOPosAnimLength_in = 1.0 / adsTransInTime;
+                    }
+                }
+            }
+
             if(adsRequested)
-                lerpRate = (float)pml->msec * pml->weaponinfo->OOPosAnimLength[0] + ps->fWeaponPosFrac;
+                lerpRate = (float)pml->msec * OOPosAnimLength_in + ps->fWeaponPosFrac;
             else
                 lerpRate = ps->fWeaponPosFrac - (float)pml->msec * pml->weaponinfo->OOPosAnimLength[1];
 

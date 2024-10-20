@@ -912,4 +912,16 @@ typedef struct customPlayerState_s
     ////
     int protocol;
 } customPlayerState_t;
+
+struct customWeaponinfo
+{
+    int reloadAddTime;
+    int adsTransInTime;
+    float adsZoomInFrac;
+    float idleCrouchFactor;
+    float idleProneFactor;
+    int rechamberWhileAds;
+    float adsViewErrorMin;
+    float adsViewErrorMax;
+};
 ////
