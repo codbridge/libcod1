@@ -609,12 +609,12 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
                     {
                         bitmask &= ~PMF_SPECTATOR;
                     }
-                    else if (bitmask & 0x20000)
+                    else if (bitmask & 0x20000) // Play
                     {
                         bitmask &= ~0x20000;
                         bitmask |= 0x40000;
                     }
-                    else if (bitmask & 0x10000)
+                    else if (bitmask & 0x10000) // Killcam
                     {
                         bitmask &= ~0x10000;
                         bitmask |= 0x30000;
