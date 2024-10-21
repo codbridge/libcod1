@@ -216,7 +216,7 @@ void gsc_testfunction()
 }
 void gsc_testmethod(scr_entref_t ref)
 {
-#if 1
+#if 0
     int id = ref.entnum;
     client_t* client = &svs.clients[id];
     playerState_t *ps = SV_GameClientNum(id);

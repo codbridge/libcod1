@@ -75,7 +75,7 @@
 #define PMF_BACKWARDS_RUN   0x40
 #define PMF_SLIDING         0x100
 #define PMF_RESPAWNED       0x800 // until BUTTON_ATTACK released
-#define PMF_JUMPING         0x2000
+#define PMF_JUMP_SLOWDOWN   0x2000
 #define PMF_FREEZE          0x4000
 #define PMF_SPECTATOR       0x40000
 #define PMF_FOLLOW          0x80000

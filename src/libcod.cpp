@@ -515,51 +515,27 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
     int clientProtocol_to = customPlayerState[to->clientNum].protocol;
     int clientProtocol_from = 0;
 
-    /*client_t *client_to;
-    client_t *client_from;*/
+    client_t *cl_to = &svs.clients[to->clientNum];
+    client_t *cl_from;
+
     
     if (!from)
     {
         from = &dummy;
         memset(&dummy, 0, sizeof(dummy));
-        //client_to = &svs.clients[to->clientNum];
     }
     else
     {
-        /*client_to = &svs.clients[to->clientNum];
-        client_from = &svs.clients[from->clientNum];*/
         clientProtocol_from = customPlayerState[from->clientNum].protocol;
+        cl_from = &svs.clients[from->clientNum];
     }
 
     lc = 0;
     for (i = 0, field = &playerStateFields; i < 0x67; i++, field++)
     {
         fromF = (int *)((byte *)from + field->offset);
-        /*if(clientProtocol_to == 1 && !strcmp(field->name, "deltaTime"))
-            toF = (int *)((byte *)to + (field->offset + 4));
-        else
-            */toF = (int *)((byte *)to + field->offset);
-
-
-        /*if (!strcmp(field->name, "deltaTime")
-            && clientProtocol_from
-            && clientProtocol_from == 6 && clientProtocol_to == 1)
-        {
-            toF = (int *)((byte *)to + field->offset + 4);
-            printf("##### toF: %i\n", (unsigned int)(uintptr_t)toF);
-        }*/
-
-
-        /*if (!strcmp(field->name, "deltaTime"))
-        {
-            printf("##### _deltaTime: %i\n", *toF);
-        }*/
-
-
-
-
-
-
+        toF = (int *)((byte *)to + field->offset);
+        
         if(*fromF != *toF)
             lc = i + 1;
     }
@@ -569,21 +545,7 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
     for (i = 0, field = &playerStateFields; i < lc; i++, field++)
     {
         fromF = (int *)((byte *)from + field->offset);
-        /*if(clientProtocol_to == 1 && !strcmp(field->name, "deltaTime"))
-            toF = (int *)((byte *)to + (field->offset + 4));
-        else
-            */toF = (int *)((byte *)to + field->offset);
-
-
-        /*if (!strcmp(field->name, "deltaTime"))
-        {
-            printf("##### _ _deltaTime: %i\n", *toF);
-        }*/
-
-
-
-
-
+        toF = (int *)((byte *)to + field->offset);
         
         floatbits = *(float *)toF;
         signedbits = *(int32_t *)toF;
@@ -614,38 +576,75 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
             else
             {
                 numBits = abs(field->bits);
-                if(!strcmp(field->name, "pm_flags") && clientProtocol_to == 1)
-                    numBits -=2;
-                bitmask = unsignedbits;
 
-
-                /*if (!strcmp(field->name, "pm_flags")
-                    && clientProtocol_from
-                    && clientProtocol_from == 6 && clientProtocol_to == 1)
+                if (!strcmp(field->name, "pm_flags"))
                 {
-                    if (bitmask & PMF_FOLLOW)
+                    if (clientProtocol_to == 1)
                     {
-                        printf("##### bitmask: %X\n", bitmask);
-
-
-
-
+                        printf("####### <Write> pm_flags numBits -= 2\n");
+                        numBits -=2;
                     }
                 }
-                else if (!strcmp(field->name, "pm_flags")
-                    && clientProtocol_from
-                    && clientProtocol_from == 1 && clientProtocol_to == 6)
+
+                bitmask = unsignedbits;
+                
+
+
+
+
+
+                if (!strcmp(field->name, "pm_flags"))
                 {
-                    printf("##### 1to6 bitmask: %X\n", bitmask);
-                }*/
+                    printf("####### <Write> pm_flags %X - to protocol = %i, name = %s\n", bitmask, clientProtocol_to, cl_to->name);
+                    if (clientProtocol_from)
+                    {
+                        printf("####### ... from protocol = %i, name = %s\n", clientProtocol_from, cl_from->name);
+                    }
+                }
+
+                if (!strcmp(field->name, "deltaTime"))
+                {
+                    printf("####### <Write> deltaTime %i - to protocol = %i, name = %s\n", bitmask, clientProtocol_to, cl_to->name);
+                    if (clientProtocol_from)
+                    {
+                        printf("####### ... from protocol = %i, name = %s\n", clientProtocol_from, cl_from->name);
+                    }
+                }
+
+
+                if (!strcmp(field->name, "pm_flags"))
+                {
+                    if (clientProtocol_from)
+                    {
+                        if (clientProtocol_from == 1 && clientProtocol_to == 6)
+                        {
+                            printf("####### <Write> KC 1.5 KILLED 1.1\n");
+                            printf("####### ... pm_flags: %X \n", bitmask);
+                            if (bitmask & 0x10000)
+                            {
+                                bitmask &= ~0x10000;
+                                bitmask |= 0x30000;
+                            }
+                            printf("####### ... pm_flags update: %X \n", bitmask);
+                        }
+                    }
+                }
+
+
+
+
+
+
+
+                
+
 
 
                 if (!strcmp(field->name, "pm_flags")
                     && clientProtocol_to == 1)
                 {
-                    //printf("##### before: %X\n", bitmask);
-                    if(bitmask & PMF_JUMPING)
-                        bitmask &= ~PMF_JUMPING;
+                    if(bitmask & PMF_JUMP_SLOWDOWN)
+                        bitmask &= ~PMF_JUMP_SLOWDOWN;
                     if(bitmask & PMF_DISABLEWEAPON)
                         bitmask &= ~PMF_DISABLEWEAPON;
                     if (bitmask & PMF_FOLLOW)
@@ -667,9 +666,7 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
                         bitmask &= ~0x10000;
                         bitmask |= 0x30000;
                     }
-                    //printf("##### after:  %X\n", bitmask);
                 }
-                
                 
                 abs3bits = numBits & 7;
                 if (abs3bits)
@@ -838,11 +835,21 @@ void custom_MSG_ReadDeltaPlayerstate(msg_t *msg, playerState_t *from, playerStat
     uint32_t unsignedbits;
 
     int clientProtocol_to = customPlayerState[to->clientNum].protocol;
+    int clientProtocol_from = 0;
+
+    client_t *cl_to = &svs.clients[to->clientNum];
+    client_t *cl_from;
+
     
     if (!from)
     {
         from = &dummy;
         memset(&dummy, 0, sizeof(dummy));
+    }
+    else
+    {
+        clientProtocol_from = customPlayerState[from->clientNum].protocol;
+        cl_from = &svs.clients[from->clientNum];
     }
     memcpy(to, from, sizeof(playerState_t));
     
@@ -857,17 +864,6 @@ void custom_MSG_ReadDeltaPlayerstate(msg_t *msg, playerState_t *from, playerStat
             *toF = *fromF;
             continue;
         }
-        
-
-        /*if (!strcmp(field->name, "deltaTime"))
-        {
-            printf("##### _toF: %i\n", *toF);
-        }
-        if (!strcmp(field->name, "deltaTime"))
-        {
-            printf("##### fromF: %i\n", *fromF);
-        }*/
-
         
         if (!field->bits)
         {
@@ -886,9 +882,15 @@ void custom_MSG_ReadDeltaPlayerstate(msg_t *msg, playerState_t *from, playerStat
         {
             unsignedbits = (unsigned int)field->bits >> 31;
             readbits = abs(field->bits);
-
-            if(!strcmp(field->name, "pm_flags") && clientProtocol_to == 1)
-                readbits -= 2;
+            
+            if (!strcmp(field->name, "pm_flags"))
+            {
+                if (clientProtocol_to == 1)
+                {
+                    printf("####### >Read< pm_flags readbits -= 2\n");
+                    readbits -= 2;
+                }
+            }
 
             if((readbits & 7) != 0)
                 readbyte = MSG_ReadBits(msg, readbits & 7);
@@ -900,12 +902,34 @@ void custom_MSG_ReadDeltaPlayerstate(msg_t *msg, playerState_t *from, playerStat
 
             if(unsignedbits && ((readbyte >> (readbits - 1)) & 1) != 0)
                 readbyte |= ~((1 << readbits) - 1);
+            
 
-            /*if (!strcmp(field->name, "deltaTime"))
+
+
+
+
+            if (!strcmp(field->name, "pm_flags"))
             {
-                printf("##### readbyte: %i\n", readbyte);
-            }*/
+                printf("####### >Read< pm_flags %X - to protocol = %i, name = %s\n", readbyte, clientProtocol_to, cl_to->name);
+                if (clientProtocol_from)
+                {
+                    printf("####### ... from protocol = %i, name = %s\n", clientProtocol_from, cl_from->name);
+                }
+            }
+            if (!strcmp(field->name, "deltaTime"))
+            {
+                printf("####### >Read< deltaTime %i - to protocol = %i, name = %s\n", readbyte, clientProtocol_to, cl_to->name);
+                if (clientProtocol_from)
+                {
+                    printf("####### ... from protocol = %i, name = %s\n", clientProtocol_from, cl_from->name);
+                }
+            }
 
+
+
+
+
+            
             *toF = readbyte;
         }
     }
@@ -914,11 +938,6 @@ void custom_MSG_ReadDeltaPlayerstate(msg_t *msg, playerState_t *from, playerStat
     {
         fromF = (int32_t *)((byte *)from + field->offset);
         toF = (int32_t *)((byte *)to + field->offset);
-
-        if (!strcmp(field->name, "deltaTime"))
-        {
-            printf("##### (read) toF: %i\n", *toF);
-        }
         
         *toF = *fromF;
     }
@@ -1109,7 +1128,7 @@ float custom_PM_GetLandFactor()
 
 void Jump_ClearState(playerState_s *ps)
 {
-    ps->pm_flags &= ~PMF_JUMPING;
+    ps->pm_flags &= ~PMF_JUMP_SLOWDOWN;
     ps->fJumpOriginZ = 0.0;
 }
 
@@ -1169,7 +1188,7 @@ void custom_PM_WalkMove()
     ps = (*pm)->ps;
     clientProtocol = customPlayerState[ps->clientNum].protocol;
     
-    if (ps->pm_flags & PMF_JUMPING)
+    if (ps->pm_flags & PMF_JUMP_SLOWDOWN)
     {
         if(clientProtocol != 1)
             Jump_ApplySlowdown(ps);
@@ -1342,6 +1361,88 @@ void custom_PM_UpdateLean(playerState_s *ps, usercmd_s *cmd, void (*capsuleTrace
             ps->leanf = (float)unknown_func(ps->leanf) * fLean;
     }
 }
+
+void custom_PM_UpdateAimDownSightLerp()
+{
+    float lerpRate;
+    playerState_t *ps;
+    bool adsRequested;
+    int clientProtocol;
+
+    ps = (*pm)->ps;
+    clientProtocol = customPlayerState[ps->clientNum].protocol;
+    
+    if (pml->weaponinfo->aimDownSight)
+    {
+        adsRequested = 0;
+
+        if ((!pml->weaponinfo->segmentedReload
+            && ps->weaponstate == WEAPON_RELOADING
+            && ps->weaponTime - pml->weaponinfo->adsReloadTransTime > 0)
+            || (pml->weaponinfo->segmentedReload
+            && (ps->weaponstate == WEAPON_RELOADING
+                || ps->weaponstate == WEAPON_RELOADING_INTERUPT
+                || ps->weaponstate == WEAPON_RELOAD_START
+                || ps->weaponstate == WEAPON_RELOAD_START_INTERUPT
+                || (ps->weaponstate == WEAPON_RELOAD_END && ps->weaponTime - pml->weaponinfo->adsReloadTransTime > 0)))
+            || ((!pml->weaponinfo->rechamberWhileAds && clientProtocol != 1) && ps->weaponstate == WEAPON_RECHAMBERING))
+        {
+            adsRequested = 0;
+        }
+        else if ((ps->pm_flags & PMF_ZOOMING) != 0)
+        {
+            adsRequested = 1;
+        }
+
+        if(pml->weaponinfo->adsFire && ps->weaponDelay && ps->weaponstate == WEAPON_FIRING)
+            adsRequested = 1;
+
+        if ((adsRequested && ps->fWeaponPosFrac != 1.0) || (!adsRequested && ps->fWeaponPosFrac != 0.0))
+        {
+            float OOPosAnimLength_in;
+            OOPosAnimLength_in = pml->weaponinfo->OOPosAnimLength[0];
+            if (clientProtocol == 1)
+            {
+                auto weaponIt = customWeaponinfo.find(pml->weaponinfo->name);
+                if (weaponIt != customWeaponinfo.end())
+                {
+                    auto versionIt = weaponIt->second.find(clientProtocol);
+                    if (versionIt != weaponIt->second.end())
+                    {
+                        float adsTransInTime = versionIt->second.adsTransInTime;
+                        OOPosAnimLength_in = 1.0 / adsTransInTime;
+                    }
+                }
+            }
+
+            if(adsRequested)
+                lerpRate = (float)pml->msec * OOPosAnimLength_in + ps->fWeaponPosFrac;
+            else
+                lerpRate = ps->fWeaponPosFrac - (float)pml->msec * pml->weaponinfo->OOPosAnimLength[1];
+
+            ps->fWeaponPosFrac = lerpRate;
+
+            if (ps->fWeaponPosFrac < 1.0)
+            {
+                if(ps->fWeaponPosFrac <= 0.0)
+                    ps->fWeaponPosFrac = 0;
+            }
+            else
+            {
+                ps->fWeaponPosFrac = 1.0;
+            }
+        }
+    }
+    else
+    {
+        ps->fWeaponPosFrac = 0.0;
+    }
+}
+
+
+
+
+
 
 
 
@@ -1626,7 +1727,7 @@ void custom_PM_CheckDuck()
                         if (clientProtocol == 6)
                         {
                             // Jump_ActivateSlowdown
-                            ps->pm_flags |= PMF_JUMPING;
+                            ps->pm_flags |= PMF_JUMP_SLOWDOWN;
                             ps->pm_time = JUMP_LAND_SLOWDOWN_TIME;
                         }
                     }
@@ -1776,96 +1877,30 @@ int custom_BG_CheckProne(int passEntityNum, const float *const vPos, float fSize
         prone_feet_dist);
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-void custom_PM_UpdateAimDownSightLerp()
+int custom_PM_GetViewHeightLerpTime(const playerState_s *ps, int iTarget, int bDown)
 {
-    float lerpRate;
-    playerState_t *ps;
-    bool adsRequested;
-    int clientProtocol;
-
-    ps = (*pm)->ps;
-    clientProtocol = customPlayerState[ps->clientNum].protocol;
+    int clientProtocol = customPlayerState[ps->clientNum].protocol;
     
-    if (pml->weaponinfo->aimDownSight)
+    if(iTarget == ps->proneViewHeight)
+        return 400;
+
+    if(iTarget != ps->crouchViewHeight)
+		return 200;
+
+    if (clientProtocol == 1)
     {
-        adsRequested = 0;
+        if(!bDown)
+		    return 400;
 
-        if ((!pml->weaponinfo->segmentedReload
-            && ps->weaponstate == WEAPON_RELOADING
-            && ps->weaponTime - pml->weaponinfo->adsReloadTransTime > 0)
-            || (pml->weaponinfo->segmentedReload
-            && (ps->weaponstate == WEAPON_RELOADING
-                || ps->weaponstate == WEAPON_RELOADING_INTERUPT
-                || ps->weaponstate == WEAPON_RELOAD_START
-                || ps->weaponstate == WEAPON_RELOAD_START_INTERUPT
-                || (ps->weaponstate == WEAPON_RELOAD_END && ps->weaponTime - pml->weaponinfo->adsReloadTransTime > 0)))
-            || ((!pml->weaponinfo->rechamberWhileAds && clientProtocol != 1) && ps->weaponstate == WEAPON_RECHAMBERING))
-        {
-            adsRequested = 0;
-        }
-        else if ((ps->pm_flags & PMF_ZOOMING) != 0)
-        {
-            adsRequested = 1;
-        }
-
-        if(pml->weaponinfo->adsFire && ps->weaponDelay && ps->weaponstate == WEAPON_FIRING)
-            adsRequested = 1;
-
-        if ((adsRequested && ps->fWeaponPosFrac != 1.0) || (!adsRequested && ps->fWeaponPosFrac != 0.0))
-        {
-            float OOPosAnimLength_in;
-            OOPosAnimLength_in = pml->weaponinfo->OOPosAnimLength[0];
-            if (clientProtocol == 1)
-            {
-                auto weaponIt = customWeaponinfo.find(pml->weaponinfo->name);
-                if (weaponIt != customWeaponinfo.end())
-                {
-                    auto versionIt = weaponIt->second.find(clientProtocol);
-                    if (versionIt != weaponIt->second.end())
-                    {
-                        float adsTransInTime = versionIt->second.adsTransInTime;
-                        OOPosAnimLength_in = 1.0 / adsTransInTime;
-                    }
-                }
-            }
-
-            if(adsRequested)
-                lerpRate = (float)pml->msec * OOPosAnimLength_in + ps->fWeaponPosFrac;
-            else
-                lerpRate = ps->fWeaponPosFrac - (float)pml->msec * pml->weaponinfo->OOPosAnimLength[1];
-
-            ps->fWeaponPosFrac = lerpRate;
-
-            if (ps->fWeaponPosFrac < 1.0)
-            {
-                if(ps->fWeaponPosFrac <= 0.0)
-                    ps->fWeaponPosFrac = 0;
-            }
-            else
-            {
-                ps->fWeaponPosFrac = 1.0;
-            }
-        }
+        if((ps->pm_flags & 4) != 0)
+		    return 100;
+        return 150;
     }
-    else
-    {
-        ps->fWeaponPosFrac = 0.0;
-    }
+
+    if(bDown)
+        return 200;
+    return 400;
 }
-
-
 
 
 
@@ -2030,19 +2065,15 @@ void *custom_Sys_LoadDll(const char *name, char *fqpath, int (**entryPoint)(int,
     hook_jmp((int)dlsym(libHandle, "_init") + 0xBC52, (int)custom_PM_GetLandFactor);
     hook_jmp((int)dlsym(libHandle, "_init") + 0xD23D, (int)custom_PM_WalkMove);
     hook_jmp((int)dlsym(libHandle, "PM_UpdateLean"), (int)custom_PM_UpdateLean);
-
-
     hook_jmp((int)dlsym(libHandle, "PM_UpdateAimDownSightLerp"), (int)custom_PM_UpdateAimDownSightLerp);
-
 
     
 
 
-
-
-
+    
     //hook_jmp((int)dlsym(libHandle, "_init") + 0x104C4, (int)custom_PM_CheckDuck);
     //hook_jmp((int)dlsym(libHandle, "BG_CheckProne"), (int)custom_BG_CheckProne);
+    //hook_jmp((int)dlsym(libHandle, "PM_GetViewHeightLerpTime"), (int)custom_PM_GetViewHeightLerpTime);
     
 
 
