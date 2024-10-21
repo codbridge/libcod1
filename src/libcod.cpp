@@ -546,7 +546,7 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
     {
         fromF = (int *)((byte *)from + field->offset);
         toF = (int *)((byte *)to + field->offset);
-        
+
         floatbits = *(float *)toF;
         signedbits = *(int32_t *)toF;
         unsignedbits = *(uint32_t *)toF;
@@ -608,6 +608,7 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
                     if (clientProtocol_from)
                     {
                         printf("####### ... from protocol = %i, name = %s\n", clientProtocol_from, cl_from->name);
+                        printf("####### ... from deltaTime = %i\n", *fromF);
                     }
                 }
 
@@ -620,12 +621,22 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
                         {
                             printf("####### <Write> KC 1.5 KILLED 1.1\n");
                             printf("####### ... pm_flags: %X \n", bitmask);
+                            if(bitmask & PMF_JUMP_SLOWDOWN)
+                                bitmask &= ~PMF_JUMP_SLOWDOWN;
+                            if(bitmask & PMF_DISABLEWEAPON)
+                                bitmask &= ~PMF_DISABLEWEAPON;
                             if (bitmask & 0x10000)
                             {
                                 bitmask &= ~0x10000;
                                 bitmask |= 0x30000;
                             }
                             printf("####### ... pm_flags update: %X \n", bitmask);
+                        }
+                        else if (clientProtocol_from == 6 && clientProtocol_to == 1)
+                        {
+                            printf("####### <Write> KC 1.1 KILLED 1.5\n");
+                            printf("####### ... pm_flags: %X \n", bitmask);
+                            
                         }
                     }
                 }
