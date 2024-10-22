@@ -576,108 +576,94 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
             else
             {
                 numBits = abs(field->bits);
-
-                if (!strcmp(field->name, "pm_flags"))
-                {
-                    if (clientProtocol_to == 1)
-                    {
-                        printf("####### <Write> pm_flags numBits -= 2\n");
-                        numBits -=2;
-                    }
-                }
-
                 bitmask = unsignedbits;
+
+
+
+
+
+
+
+
+                /*if (!strcmp(field->name, "pm_flags") && clientProtocol_from == 6 && clientProtocol_to == 1)
+                {
+                    printf("<WRITE> PASS1\n");
+                }
+                else if (!strcmp(field->name, "pm_flags") && clientProtocol_from == 1 && clientProtocol_to == 6)
+                {
+                    printf("<WRITE> PASS2\n");
+                }
+                else if (!strcmp(field->name, "pm_flags") && clientProtocol_from == 1 && clientProtocol_to == 1 && from->clientNum != to->clientNum)
+                {
+                    printf("<WRITE> PASS3\n");
+                }*/
+
+                if (!strcmp(field->name, "pm_flags") && clientProtocol_from && clientProtocol_to == 1 && from->clientNum != to->clientNum)
+                {
+                    printf("<WRITE> PASS\n");
+                }
+                else
+                {
+                    if (!strcmp(field->name, "pm_flags")
+                        && clientProtocol_to == 1)
+                    {
+                        numBits -=2;
+
+                        if(bitmask & PMF_JUMP_SLOWDOWN)
+                            bitmask &= ~PMF_JUMP_SLOWDOWN;
+                        if(bitmask & PMF_DISABLEWEAPON)
+                            bitmask &= ~PMF_DISABLEWEAPON;
+
+                        if (bitmask & PMF_FOLLOW)
+                        {
+                            bitmask &= ~PMF_FOLLOW;
+                            bitmask &= ~PMF_SPECTATOR;
+                        }
+                        else if (bitmask == PMF_SPECTATOR)
+                        {
+                            bitmask &= ~PMF_SPECTATOR;
+                        }
+                        else if (bitmask & 0x20000) // Playing
+                        {
+                            bitmask &= ~0x20000;
+                            bitmask |= 0x40000;
+                        }
+                        else if (bitmask & 0x10000) // Killcam
+                        {
+                            bitmask &= ~0x10000;
+                            bitmask |= 0x30000;
+                        }
+                    }
+
+                }
+
+
+
+
+
+
+
+
+
+
+
                 
-
-
+                
+                
 
 
 
                 if (!strcmp(field->name, "pm_flags"))
                 {
-                    printf("####### <Write> pm_flags %X - to protocol = %i, name = %s\n", bitmask, clientProtocol_to, cl_to->name);
+                    printf("<WRITE> [TO] pm_flags: %X | name: %s | protocol: %i\n", bitmask, cl_to->name, clientProtocol_to);
                     if (clientProtocol_from)
                     {
-                        printf("####### ... from protocol = %i, name = %s\n", clientProtocol_from, cl_from->name);
-                    }
-                }
-
-                if (!strcmp(field->name, "deltaTime"))
-                {
-                    printf("####### <Write> deltaTime %i - to protocol = %i, name = %s\n", bitmask, clientProtocol_to, cl_to->name);
-                    if (clientProtocol_from)
-                    {
-                        printf("####### ... from protocol = %i, name = %s\n", clientProtocol_from, cl_from->name);
-                        printf("####### ... from deltaTime = %i\n", *fromF);
-                    }
-                }
-
-
-                if (!strcmp(field->name, "pm_flags"))
-                {
-                    if (clientProtocol_from)
-                    {
-                        if (clientProtocol_from == 1 && clientProtocol_to == 6)
-                        {
-                            printf("####### <Write> KC 1.5 KILLED 1.1\n");
-                            printf("####### ... pm_flags: %X \n", bitmask);
-                            if(bitmask & PMF_JUMP_SLOWDOWN)
-                                bitmask &= ~PMF_JUMP_SLOWDOWN;
-                            if(bitmask & PMF_DISABLEWEAPON)
-                                bitmask &= ~PMF_DISABLEWEAPON;
-                            if (bitmask & 0x10000)
-                            {
-                                bitmask &= ~0x10000;
-                                bitmask |= 0x30000;
-                            }
-                            printf("####### ... pm_flags update: %X \n", bitmask);
-                        }
-                        else if (clientProtocol_from == 6 && clientProtocol_to == 1)
-                        {
-                            printf("####### <Write> KC 1.1 KILLED 1.5\n");
-                            printf("####### ... pm_flags: %X \n", bitmask);
-                            
-                        }
+                        printf("...   [FROM] pm_flags: %X | name: %s | protocol: %i\n", *fromF, cl_from->name, clientProtocol_from);
                     }
                 }
 
 
 
-
-
-
-
-                
-
-
-
-                if (!strcmp(field->name, "pm_flags")
-                    && clientProtocol_to == 1)
-                {
-                    if(bitmask & PMF_JUMP_SLOWDOWN)
-                        bitmask &= ~PMF_JUMP_SLOWDOWN;
-                    if(bitmask & PMF_DISABLEWEAPON)
-                        bitmask &= ~PMF_DISABLEWEAPON;
-                    if (bitmask & PMF_FOLLOW)
-                    {
-                        bitmask &= ~PMF_FOLLOW;
-                        bitmask &= ~PMF_SPECTATOR;
-                    }
-                    else if (bitmask == PMF_SPECTATOR)
-                    {
-                        bitmask &= ~PMF_SPECTATOR;
-                    }
-                    else if (bitmask & 0x20000) // Playing
-                    {
-                        bitmask &= ~0x20000;
-                        bitmask |= 0x40000;
-                    }
-                    else if (bitmask & 0x10000) // Killcam
-                    {
-                        bitmask &= ~0x10000;
-                        bitmask |= 0x30000;
-                    }
-                }
                 
                 abs3bits = numBits & 7;
                 if (abs3bits)
@@ -825,14 +811,6 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
         MSG_WriteDeltaHudElems(msg, from->hud.archival, to->hud.archival, MAX_HUDELEMS_ARCHIVAL);
         MSG_WriteDeltaHudElems(msg, from->hud.current, to->hud.current, MAX_HUDELEMS_CURRENT);
     }
-
-#if 0
-    if ((clientProtocol_from && clientProtocol_from != clientProtocol_to)
-        || !clientProtocol_from)
-    {
-        printf("-------------------------- END\n");
-    }
-#endif
 }
 
 void custom_MSG_ReadDeltaPlayerstate(msg_t *msg, playerState_t *from, playerState_t *to)
@@ -851,7 +829,7 @@ void custom_MSG_ReadDeltaPlayerstate(msg_t *msg, playerState_t *from, playerStat
     client_t *cl_to = &svs.clients[to->clientNum];
     client_t *cl_from;
 
-    
+
     if (!from)
     {
         from = &dummy;
@@ -893,15 +871,31 @@ void custom_MSG_ReadDeltaPlayerstate(msg_t *msg, playerState_t *from, playerStat
         {
             unsignedbits = (unsigned int)field->bits >> 31;
             readbits = abs(field->bits);
-            
-            if (!strcmp(field->name, "pm_flags"))
+
+
+
+            /*if (!strcmp(field->name, "pm_flags") && clientProtocol_from == 6 && clientProtocol_to == 1)
             {
-                if (clientProtocol_to == 1)
-                {
-                    printf("####### >Read< pm_flags readbits -= 2\n");
-                    readbits -= 2;
-                }
+                printf(">READ< PASS1\n");
             }
+            else if (!strcmp(field->name, "pm_flags") && clientProtocol_from == 1 && clientProtocol_to == 6)
+            {
+                printf(">READ< PASS2\n");
+            }
+            else if (!strcmp(field->name, "pm_flags") && clientProtocol_from == 1 && clientProtocol_to == 1 && from->clientNum != to->clientNum)
+            {
+                printf("<READ> PASS3\n");
+            }*/
+            if (!strcmp(field->name, "pm_flags") && clientProtocol_from && clientProtocol_to == 1 && from->clientNum != to->clientNum)
+            {
+                printf("<WRITE> PASS\n");
+            }
+            else if (!strcmp(field->name, "pm_flags") && clientProtocol_to == 1)
+            {
+                readbits -= 2;
+            }
+
+
 
             if((readbits & 7) != 0)
                 readbyte = MSG_ReadBits(msg, readbits & 7);
@@ -913,26 +907,16 @@ void custom_MSG_ReadDeltaPlayerstate(msg_t *msg, playerState_t *from, playerStat
 
             if(unsignedbits && ((readbyte >> (readbits - 1)) & 1) != 0)
                 readbyte |= ~((1 << readbits) - 1);
-            
-
 
 
 
 
             if (!strcmp(field->name, "pm_flags"))
             {
-                printf("####### >Read< pm_flags %X - to protocol = %i, name = %s\n", readbyte, clientProtocol_to, cl_to->name);
+                printf(">READ<  [TO] pm_flags: %X | name: %s | protocol: %i\n", readbyte, cl_to->name, clientProtocol_to);
                 if (clientProtocol_from)
                 {
-                    printf("####### ... from protocol = %i, name = %s\n", clientProtocol_from, cl_from->name);
-                }
-            }
-            if (!strcmp(field->name, "deltaTime"))
-            {
-                printf("####### >Read< deltaTime %i - to protocol = %i, name = %s\n", readbyte, clientProtocol_to, cl_to->name);
-                if (clientProtocol_from)
-                {
-                    printf("####### ... from protocol = %i, name = %s\n", clientProtocol_from, cl_from->name);
+                    printf("...   [FROM] pm_flags: %X | name: %s | protocol: %i\n", *fromF, cl_from->name, clientProtocol_from);
                 }
             }
 
