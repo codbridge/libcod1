@@ -47,6 +47,15 @@ scr_method_t scriptMethods[] =
 
     //// Bot
     {"setUse", gsc_bots_setuse, 0},
+    {"setWalkValues", gsc_bots_setwalkvalues, 0},
+    {"setWalkDir", gsc_bots_setwalkdir, 0},
+    {"setBotStance", gsc_bots_setbotstance, 0},
+    {"setLean", gsc_bots_setlean, 0},
+    {"setAim", gsc_bots_setaim, 0},
+    {"fireWeapon", gsc_bots_fireweapon, 0},
+    {"meleeWeapon", gsc_bots_meleeweapon, 0},
+    {"reloadWeapon", gsc_bots_reloadweapon, 0},
+    {"switchToWeaponId", gsc_bots_switchtoweaponid, 0},
     ////
 
     {"testMethod", gsc_testmethod, 0},

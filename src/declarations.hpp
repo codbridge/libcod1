@@ -55,6 +55,7 @@
 #define WBUTTON_CROUCH      0x80
 
 #define MOVE_AXIS_MAX   127
+#define KEY_NONE        0
 #define KEY_FORWARD     MOVE_AXIS_MAX
 #define KEY_BACK        -KEY_FORWARD
 #define KEY_RIGHT       MOVE_AXIS_MAX
@@ -909,6 +910,11 @@ typedef struct customPlayerState_s
 {
     //// Bot
     int botButtons;
+    int botWButtons;
+    int botWeapon;
+    char botForwardMove;
+    char botRightMove;
+    char botUpMove;
     ////
     int protocol;
 } customPlayerState_t;
