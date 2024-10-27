@@ -496,7 +496,7 @@ void custom_SV_SendClientGameState(client_t *client)
         SV_Netchan_TransmitNextFragment(&client->netchan);
 }
 
-#if 0
+#if 1
 void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerState_t *to)
 {
     int i, j, lc;
@@ -515,10 +515,8 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
     
     int clientProtocol_to = customPlayerState[to->clientNum].protocol;
     int clientProtocol_from = 0;
-
-    client_t *cl_to = &svs.clients[to->clientNum];
-    client_t *cl_from;
-
+    /*client_t *cl_to = &svs.clients[to->clientNum];
+    client_t *cl_from;*/
     
     if (!from)
     {
@@ -528,7 +526,7 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
     else
     {
         clientProtocol_from = customPlayerState[from->clientNum].protocol;
-        cl_from = &svs.clients[from->clientNum];
+        //cl_from = &svs.clients[from->clientNum];
     }
 
     lc = 0;
@@ -579,22 +577,82 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
                 numBits = abs(field->bits);
                 bitmask = unsignedbits;
 
-
                 /*if (!strcmp(field->name, "pm_flags"))
                 {
                     printf("<WRITE> fromF: %X\n", *fromF);
                     printf("<WRITE> toF: %X\n", *toF);
                 }*/
 
+                if (!strcmp(field->name, "pm_flags"))
+                {
+                    if (clientProtocol_to == 1)
+                    {
+                        if (clientProtocol_from == 6)
+                        {
+                            //printf("<WRITE> PASS\n");
+                            if (*fromF & 0x10000)
+                            {
+                                numBits -=2;
+                            }
+                        }
+                        else if (clientProtocol_from == 1 && (*fromF & 0x10000))
+                        {
+                            //printf("<WRITE> PASS2\n");
+                        }
+                        else
+                        {
+                            numBits -=2;
 
+                            if(bitmask & PMF_JUMP_SLOWDOWN)
+                                bitmask &= ~PMF_JUMP_SLOWDOWN;
+                            if(bitmask & PMF_DISABLEWEAPON)
+                                bitmask &= ~PMF_DISABLEWEAPON;
 
-
-
-
-
-
-
-
+                            if (bitmask & PMF_FOLLOW)
+                            {
+                                bitmask &= ~PMF_FOLLOW;
+                                bitmask &= ~PMF_SPECTATOR;
+                            }
+                            else if (bitmask == PMF_SPECTATOR)
+                            {
+                                bitmask &= ~PMF_SPECTATOR;
+                            }
+                            else if (bitmask & 0x20000) // Playing
+                            {
+                                bitmask &= ~0x20000;
+                                bitmask |= 0x40000;
+                            }
+                            else if (bitmask & 0x10000) // Killcam
+                            {
+                                bitmask &= ~0x10000;
+                                bitmask |= 0x30000;
+                            }
+                        }
+                    }
+                    else if (clientProtocol_to == 6)
+                    {
+                        if (bitmask & 0x10000)
+                        {
+                            if (clientProtocol_from == 1)
+                            {
+                                //printf("<WRITE> _PASS\n");
+                                numBits -=2;
+                                bitmask &= ~0x10000;
+                                bitmask |= 0x30000;
+                            }
+                            else if (clientProtocol_from == 6 && (*fromF & 0x10000))
+                            {
+                                if ((*fromF & 0x10000))
+                                {
+                                    //printf("<WRITE> _PASS2\n");
+                                    numBits -=2;
+                                    bitmask &= ~0x10000;
+                                    bitmask |= 0x30000;
+                                }
+                            }
+                        }
+                    }
+                }
 
                 /*if (!strcmp(field->name, "pm_flags"))
                 {
@@ -765,10 +823,8 @@ void custom_MSG_ReadDeltaPlayerstate(msg_t *msg, playerState_t *from, playerStat
 
     int clientProtocol_to = customPlayerState[to->clientNum].protocol;
     int clientProtocol_from = 0;
-
-    client_t *cl_to = &svs.clients[to->clientNum];
-    client_t *cl_from;
-
+    /*client_t *cl_to = &svs.clients[to->clientNum];
+    client_t *cl_from;*/
 
     if (!from)
     {
@@ -778,7 +834,7 @@ void custom_MSG_ReadDeltaPlayerstate(msg_t *msg, playerState_t *from, playerStat
     else
     {
         clientProtocol_from = customPlayerState[from->clientNum].protocol;
-        cl_from = &svs.clients[from->clientNum];
+        //cl_from = &svs.clients[from->clientNum];
     }
     memcpy(to, from, sizeof(playerState_t));
     
@@ -817,14 +873,31 @@ void custom_MSG_ReadDeltaPlayerstate(msg_t *msg, playerState_t *from, playerStat
                 printf(">READ< fromF: %X\n", *fromF);
                 printf(">READ< toF: %X\n", *toF);
             }*/
-
-
-
-
-
-
-
-
+            
+            if (!strcmp(field->name, "pm_flags"))
+            {
+                if (clientProtocol_to == 1)
+                {
+                    if (clientProtocol_from != 6)
+                    {
+                        if (*toF != 0x0)
+                        {
+                            readbits -= 2;
+                        }
+                        else
+                        {
+                            //printf(">READ< PASS\n");
+                        }
+                    }
+                }
+                else if (clientProtocol_to == 6)
+                {
+                    if (clientProtocol_from == 1)
+                    {
+                        readbits -= 2;
+                    }
+                }
+            }
 
             if((readbits & 7) != 0)
                 readbyte = MSG_ReadBits(msg, readbits & 7);
@@ -836,9 +909,6 @@ void custom_MSG_ReadDeltaPlayerstate(msg_t *msg, playerState_t *from, playerStat
 
             if(unsignedbits && ((readbyte >> (readbits - 1)) & 1) != 0)
                 readbyte |= ~((1 << readbits) - 1);
-
-
-
 
             /*if (!strcmp(field->name, "pm_flags"))
             {
@@ -1560,7 +1630,7 @@ class libcod
 
         hook_jmp(0x08089e7e, (int)custom_SV_DirectConnect);
         hook_jmp(0x0808ae44, (int)custom_SV_SendClientGameState);
-#if 0
+#if 1
         hook_jmp(0x08081dd3, (int)custom_MSG_WriteDeltaPlayerstate);
         hook_jmp(0x08082640, (int)custom_MSG_ReadDeltaPlayerstate);
 #endif
