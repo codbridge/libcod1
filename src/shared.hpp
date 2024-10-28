@@ -14,6 +14,7 @@
 
 #include "gsc_player.hpp"
 #include "gsc_bots.hpp"
+#include "gsc_utils.hpp"
 
 #define STACK_UNDEFINED 0
 #define STACK_STRING 1

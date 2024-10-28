@@ -71,6 +71,11 @@ echo -n "gsc_bots.cpp"
 echo $wait_indicator
 $cc $debug $options $constants -c gsc_bots.cpp -o objects/gsc_bots.opp
 
+echo -n "$list_item"
+echo -n "gsc_utils.cpp"
+echo $wait_indicator
+$cc $debug $options $constants -c gsc_utils.cpp -o objects/gsc_utils.opp
+
 echo -n "Linking libcod1.so"
 echo $wait_indicator
 objects="$(ls objects/*.opp)"

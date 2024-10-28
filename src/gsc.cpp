@@ -2,6 +2,7 @@
 
 scr_function_t scriptFunctions[] =
 {
+    {"strtok", gsc_utils_strtok, 0},
 
 
     {"testFunction", gsc_testfunction, 0},
