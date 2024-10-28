@@ -1,6 +1,8 @@
 #!/bin/bash
 
-# E.g.: ./build.sh -d --unsafe
+# E.g.: ./build.sh -d
+
+set -e # abort on error
 
 cc="g++"
 options="-I. -m32 -fPIC -Wall -fvisibility=hidden"
@@ -57,6 +59,16 @@ echo $wait_indicator
 $cc $debug $options $constants -c libcod.cpp -o objects/libcod.opp
 
 echo -n "$list_item"
+echo -n "proxy.c"
+echo $wait_indicator
+$cc $debug $options $constants -c proxy.c -o objects/proxy.opp
+
+echo -n "$list_item"
+echo -n "qvsnprintf.c"
+echo $wait_indicator
+$cc $debug $options $constants -c qvsnprintf.c -o objects/qvsnprintf.opp
+
+echo -n "$list_item"
 echo -n "gsc.cpp"
 echo $wait_indicator
 $cc $debug $options $constants -c gsc.cpp -o objects/gsc.opp
@@ -75,6 +87,11 @@ echo -n "$list_item"
 echo -n "gsc_utils.cpp"
 echo $wait_indicator
 $cc $debug $options $constants -c gsc_utils.cpp -o objects/gsc_utils.opp
+
+echo -n "$list_item"
+echo -n "utils.cpp"
+echo $wait_indicator
+$cc $debug $options $constants -c utils.cpp -o objects/utils.opp
 
 echo -n "Linking libcod1.so"
 echo $wait_indicator

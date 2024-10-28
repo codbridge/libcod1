@@ -10,12 +10,6 @@ static const SL_ConvertToString_t SL_ConvertToString = (SL_ConvertToString_t)0x0
 typedef void (*ClientCommand_t)(int clientNum);
 extern ClientCommand_t ClientCommand;
 
-typedef void (*I_strncpyz_t)(char *dest, const char *src, int destsize);
-static const I_strncpyz_t I_strncpyz = (I_strncpyz_t)0x08085e32;
-
-typedef qboolean (*Sys_IsLANAddress_t)(netadr_t adr);
-static const Sys_IsLANAddress_t Sys_IsLANAddress = (Sys_IsLANAddress_t)0x080d4ebc;
-
 typedef const char * (*PBAuthClient_t)(const char *clientAddress, int cl_punkbuster, const char *PBGuid);
 static const PBAuthClient_t PBAuthClient = (PBAuthClient_t)0x080c191c;
 
@@ -35,6 +29,12 @@ typedef void (*AddLeanToPosition_t)(float *position, float fViewYaw, float fLean
 typedef float (*UnGetLeanFraction_t)(const float fFrac);
 typedef float (*AngleNormalize180Accurate_t)(float angle);
 typedef float (*AngleNormalize180_t)(float angle);
+
+typedef short (*BigShort_t)(short l);
+static const BigShort_t BigShort = (BigShort_t)0x080859b2;
+
+typedef void (*SockadrToNetadr_t)(struct sockaddr_in *s, netadr_t *a);
+static const SockadrToNetadr_t SockadrToNetadr = (SockadrToNetadr_t)0x080d4a89;
 ////
 
 //// BG
@@ -71,6 +71,9 @@ static const Com_PrintMessage_t Com_PrintMessage = (Com_PrintMessage_t)0x0806f82
 
 typedef void (*Com_Printf_t)(const char *format, ...);
 static const Com_Printf_t Com_Printf = (Com_Printf_t)0x0806fc10;
+
+typedef void (*Com_Error_t)(errorParm_t code, const char *format, ...);
+static const Com_Error_t Com_Error = (Com_Error_t)0x0806fe74;
 ////
 
 //// Cvar
@@ -87,6 +90,14 @@ typedef void (*G_EntUnlink_t)(gentity_s *ent);
 typedef void (*G_SetClientContents_t)(gentity_s *ent);
 typedef void (*G_SetOrigin_t)(gentity_s *ent, const float *origin);
 typedef qboolean (*G_ClientCanSpectateTeam_t)(gclient_s *client, int team);
+////
+
+//// I
+typedef void (*I_strncpyz_t)(char *dest, const char *src, int destsize);
+static const I_strncpyz_t I_strncpyz = (I_strncpyz_t)0x08085e32;
+
+typedef int (*I_stricmp_t)(const char *s1, const char *s2);
+static const I_stricmp_t I_stricmp = (I_stricmp_t)0x08085f72;
 ////
 
 //// Info
@@ -174,6 +185,12 @@ static const NET_OutOfBandPrint_t NET_OutOfBandPrint = (NET_OutOfBandPrint_t)0x0
 
 typedef qboolean (*NET_CompareAdr_t)(netadr_t a, netadr_t b);
 static const NET_CompareAdr_t NET_CompareAdr = (NET_CompareAdr_t)0x0808400f;
+
+typedef void (*NetadrToSockadr_t)(netadr_t *a, struct sockaddr_in *s);
+static const NetadrToSockadr_t NetadrToSockadr = (NetadrToSockadr_t)0x080d4a0c;
+
+typedef qboolean (*NET_StringToAdr_t)(const char *s, netadr_t *a);
+static const NET_StringToAdr_t NET_StringToAdr = (NET_StringToAdr_t)0x080844e0;
 ////
 
 //// PM
@@ -193,8 +210,6 @@ typedef void (*PM_trace_t)(trace_t *results, const vec3_t start, const vec3_t mi
 typedef void (*PM_AddEvent_t)(int newEvent);
 typedef int (*PM_FootstepType_t)(int pm_flags);
 typedef float (*PM_GetLandFactor_t)();
-
-
 ////
 
 //// Scr
@@ -303,6 +318,14 @@ static const SV_SendMessageToClient_t SV_SendMessageToClient = (SV_SendMessageTo
 
 typedef void (*SV_Netchan_TransmitNextFragment_t)(netchan_t *chan);
 static const SV_Netchan_TransmitNextFragment_t SV_Netchan_TransmitNextFragment = (SV_Netchan_TransmitNextFragment_t)0x080948d0;
+////
+
+//// Sys
+typedef qboolean (*Sys_IsLANAddress_t)(netadr_t adr);
+static const Sys_IsLANAddress_t Sys_IsLANAddress = (Sys_IsLANAddress_t)0x080d4ebc;
+
+typedef qboolean (*Sys_StringToSockaddr_t)(const char *s, struct sockaddr_in *sadr);
+static const Sys_StringToSockaddr_t Sys_StringToSockaddr = (Sys_StringToSockaddr_t)0x080d4afe;
 ////
 
 //// trap

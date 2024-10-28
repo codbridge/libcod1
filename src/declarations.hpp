@@ -107,6 +107,12 @@ typedef struct scr_entref_s
     uint16_t classnum;
 } scr_entref_t;
 
+typedef enum
+{
+    ERR_FATAL = 0x0,
+    //...
+} errorParm_t;
+
 enum svc_ops_e
 {
     svc_bad,
@@ -930,4 +936,41 @@ struct customWeaponinfo
     float adsViewErrorMin;
     float adsViewErrorMax;
 };
+
+//// Proxy
+#include <arpa/inet.h>
+typedef struct
+{
+	//outboundLeakyBucketIndex_t bucket;
+	bool enabled;
+	netadr_t listenAdr;
+	netadr_t forwardAdr;
+	pthread_mutex_t lock;
+	pthread_t mainThread;
+	pthread_t *masterServerThread;
+	struct sockaddr_in *masterSockAdr;
+	int numClients;
+	int parentVersion;
+	const char *parentVersionString;
+	int socket;
+	qboolean started;
+	int version;
+	const char *versionString;
+} proxy_t;
+
+typedef struct
+{
+	int s_client;
+	pthread_t thread;
+} proxyClientThreadInfo;
+
+typedef struct
+{
+	int activeClient;
+	struct sockaddr_in addr;
+	proxy_t *proxy;
+	int *s_client;
+	int src_port;
+} proxyClientThreadArgs;
+////
 ////

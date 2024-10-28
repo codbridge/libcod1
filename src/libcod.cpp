@@ -4,9 +4,12 @@
 #include "shared.hpp"
 
 //// Cvars
+cvar_t *com_sv_running;
 cvar_t *com_timescale;
 cvar_t *fs_game;
 cvar_t *g_debugProneCheck;
+cvar_t *net_ip;
+cvar_t *net_port;
 cvar_t *sv_maxclients;
 cvar_t *sv_maxPing;
 cvar_t *sv_minPing;
@@ -21,8 +24,13 @@ vmCvar_t *g_inactivity;
 // Custom
 cvar_t *fs_callbacks;
 cvar_t *fs_callbacks_additional;
+cvar_t *sv_authorizePort;
+cvar_t *sv_authorizeServer;
 cvar_t *sv_botHook;
 cvar_t *sv_cracked;
+cvar_t *sv_logHeartbeats;
+cvar_t *sv_masterPort;
+cvar_t *sv_masterServer;
 ////
 
 //// Game lib
@@ -131,6 +139,7 @@ cHook *hook_Com_Init;
 cHook *hook_GScr_LoadGameTypeScript;
 cHook *hook_SV_BotUserMove;
 cHook *hook_Sys_LoadDll;
+cHook *hook_Sys_Quit;
 cHook *hook_SV_SpawnServer;
 
 void custom_SV_SpawnServer(char *server)
@@ -152,6 +161,8 @@ void custom_SV_SpawnServer(char *server)
         customWeaponinfo["springfield_mp"][6] = { 199, 449, 0.1, 0.6, 0.2, 0, 1.2, 1.4 };
         customWeaponinfo["springfield_mp"][1] = { 199, 299, 0.05, 0.2, 0.085, 1, 0, 0 };
     }
+
+    SV_SetupProxies();
 }
 
 void custom_Com_Init(char *commandLine)
@@ -163,9 +174,12 @@ void custom_Com_Init(char *commandLine)
     hook_Com_Init->hook();
     
     // Get references to stock cvars
+    com_sv_running = Cvar_FindVar("sv_running");
     com_timescale = Cvar_FindVar("timescale");
     fs_game = Cvar_FindVar("fs_game");
     g_debugProneCheck = Cvar_FindVar("g_debugProneCheck");
+    net_ip = Cvar_FindVar("net_ip");
+    net_port = Cvar_FindVar("net_port");
     sv_maxclients = Cvar_FindVar("sv_maxclients");
     sv_maxPing = Cvar_FindVar("sv_maxPing");
     sv_minPing = Cvar_FindVar("sv_minPing");
@@ -178,8 +192,13 @@ void custom_Com_Init(char *commandLine)
 
     fs_callbacks = Cvar_Get("fs_callbacks", "maps/mp/gametypes/_callbacksetup", CVAR_ARCHIVE);
     fs_callbacks_additional = Cvar_Get("fs_callbacks_additional", "", CVAR_ARCHIVE);
+    sv_authorizePort = Cvar_Get("sv_authorizePort", "20500", CVAR_ARCHIVE);
+    sv_authorizeServer = Cvar_Get("sv_authorizeServer", "codauthorize.activision.com", CVAR_ARCHIVE);
     sv_botHook = Cvar_Get("sv_botHook", "0", CVAR_ARCHIVE);
     sv_cracked = Cvar_Get("sv_cracked", "0", CVAR_ARCHIVE);
+    sv_logHeartbeats = Cvar_Get("sv_logHeartbeats", "1", CVAR_ARCHIVE);
+    sv_masterPort = Cvar_Get("sv_masterPort", "20510", CVAR_ARCHIVE);
+    sv_masterServer = Cvar_Get("sv_masterServer", "codmaster.activision.com", CVAR_ARCHIVE);
 }
 
 void custom_GScr_LoadGameTypeScript()
@@ -232,7 +251,7 @@ void custom_SV_DirectConnect(netadr_t from)
     client_t *cl, *newcl;
     gentity_t *ent;
     int clientNum;
-    int protocol;
+    int version;
     int challenge;
     int qport;
     const char *PBAuthAddress;
@@ -246,12 +265,12 @@ void custom_SV_DirectConnect(netadr_t from)
     Com_DPrintf("SV_DirectConnect()\n");
     
     I_strncpyz(userinfo, Cmd_Argv(1), sizeof(userinfo));
-    protocol = atoi(Info_ValueForKey(userinfo, "protocol"));
+    version = atoi(Info_ValueForKey(userinfo, "protocol"));
     
-    if (protocol != 6 && protocol != 1)
+    if (version != 6 && version != 1)
     {
         NET_OutOfBandPrint(NS_SERVER, from, va("error\nEXE_SERVER_IS_DIFFERENT_VER\x15%s\n", "1.5"));
-        Com_DPrintf("    rejected connect from protocol version %i (should be %i or %i)\n", protocol, 6, 1);
+        Com_DPrintf("    rejected connect from protocol version %i (should be %i or %i)\n", version, 6, 1);
         return;
     }
     
@@ -384,8 +403,8 @@ LAB_0808a83b:
         newcl->challenge = challenge;
 
         // Save client protocol
-        customPlayerState[clientNum].protocol = protocol;
-        Com_Printf("Connecting player #%i from patch %s\n", clientNum, getPatchFromProtocol(protocol));
+        customPlayerState[clientNum].protocol = version;
+        Com_Printf("Connecting player #%i runs on version %s\n", clientNum, getShortVersionFromProtocol(version));
 
         newcl->guid = guid;
 
@@ -560,7 +579,7 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
 
             if (!field->bits)
             {
-                if ( (float)signedbits == floatbits && (unsigned int)(signedbits + 4096) <= 0x1FFF )
+                if ((float)signedbits == floatbits && (unsigned int)(signedbits + 4096) <= 0x1FFF)
                 {
                     MSG_WriteBit0(msg);
                     MSG_WriteBits(msg, (signedbits + 4096), 5);
@@ -1437,6 +1456,17 @@ void custom_PM_UpdateAimDownSightLerp()
     }
 }
 
+void custom_Sys_Quit(void)
+{
+    SV_ShutdownProxies();
+
+    hook_Sys_Quit->unhook();
+    void (*Sys_Quit)(void);
+    *(int *)&Sys_Quit = hook_Sys_Quit->from;
+    Sys_Quit();
+    hook_Sys_Quit->hook();
+}
+
 void ServerCrash(int sig)
 {
     int fd;
@@ -1643,6 +1673,8 @@ class libcod
         hook_SV_BotUserMove->hook();
         hook_SV_SpawnServer = new cHook(0x08090d0f, (int)custom_SV_SpawnServer);
         hook_SV_SpawnServer->hook();
+        hook_Sys_Quit = new cHook(0x080d3354, int(custom_Sys_Quit));
+        hook_Sys_Quit->hook();
         
         printf("Loading complete\n");
         printf("-----------------------------------\n");

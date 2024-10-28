@@ -11,7 +11,8 @@
 
 #include "declarations.hpp"
 #include "functions.hpp"
-
+#include "utils.hpp"
+#include "proxy.h"
 #include "gsc_player.hpp"
 #include "gsc_bots.hpp"
 #include "gsc_utils.hpp"
