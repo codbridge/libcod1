@@ -183,6 +183,12 @@ static const MSG_BeginReading_t MSG_BeginReading = (MSG_BeginReading_t)0x0807F96
 
 typedef char * (*MSG_ReadStringLine_t)(msg_t *msg);
 static const MSG_ReadStringLine_t MSG_ReadStringLine = (MSG_ReadStringLine_t)0x08080212;
+
+typedef void (*MSG_InitOOB_t)(msg_t *buf, byte *data, int length);
+static const MSG_InitOOB_t MSG_InitOOB = (MSG_InitOOB_t)0x0807F928;
+
+typedef void (*MSG_WriteData_t)(msg_t *msg, const void *data, int length);
+static const MSG_WriteData_t MSG_WriteData = (MSG_WriteData_t)0x0807FD10;
 ////
 
 //// NET

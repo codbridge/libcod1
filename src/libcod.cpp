@@ -1493,7 +1493,6 @@ void custom_SV_ConnectionlessPacket(netadr_t from, msg_t *msg)
         s = MSG_ReadStringLine(msg);
         Cmd_TokenizeString(s);
         c = Cmd_Argv(0);
-        printf("##### c %s\n", c);
 
         if(sv_packet_info->integer)
             Com_Printf("SV packet %s : %s\n", NET_AdrToString(from), c);
@@ -1543,9 +1542,19 @@ void custom_SV_ConnectionlessPacket(netadr_t from, msg_t *msg)
 
 
 
+cHook *hook_ClientConnect;
+const char * custom_ClientConnect(unsigned int clientNum, unsigned int scriptPersId)
+{
+    printf("##### custom_ClientConnect\n");
 
+    hook_ClientConnect->unhook();
+    const char * (*ClientConnect)(unsigned int clientNum, unsigned int scriptPersId);
+    *(int*)&ClientConnect = hook_ClientConnect->from;
+    const char * ret = ClientConnect(clientNum, scriptPersId);
+    hook_ClientConnect->hook();
 
-
+    return ret;
+}
 
 
 
@@ -1720,6 +1729,10 @@ void *custom_Sys_LoadDll(const char *name, char *fqpath, int (**entryPoint)(int,
 
     hook_GScr_LoadGameTypeScript = new cHook((int)dlsym(libHandle, "GScr_LoadGameTypeScript"), (int)custom_GScr_LoadGameTypeScript);
     hook_GScr_LoadGameTypeScript->hook();
+
+
+    hook_ClientConnect = new cHook((int)dlsym(libHandle, "ClientConnect"), (int)custom_ClientConnect);
+    hook_ClientConnect->hook();
 
     return libHandle;
 }
