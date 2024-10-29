@@ -953,7 +953,7 @@ typedef struct
 	int parentVersion;
 	const char *parentVersionString;
 	int socket;
-	qboolean started;
+	bool started;
 	int version;
 	const char *versionString;
 } proxy_t;

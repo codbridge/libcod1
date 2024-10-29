@@ -1,7 +1,6 @@
-#include "libcod.hpp"
-
-#include "cracking.hpp"
 #include "shared.hpp"
+#include "libcod.hpp"
+#include "cracking.hpp"
 
 //// Cvars
 cvar_t *com_sv_running;
@@ -13,6 +12,7 @@ cvar_t *net_port;
 cvar_t *sv_maxclients;
 cvar_t *sv_maxPing;
 cvar_t *sv_minPing;
+cvar_t *sv_packet_info;
 cvar_t *sv_privateClients;
 cvar_t *sv_privatePassword;
 cvar_t *sv_reconnectlimit;
@@ -183,6 +183,7 @@ void custom_Com_Init(char *commandLine)
     sv_maxclients = Cvar_FindVar("sv_maxclients");
     sv_maxPing = Cvar_FindVar("sv_maxPing");
     sv_minPing = Cvar_FindVar("sv_minPing");
+    sv_packet_info = Cvar_FindVar("sv_packet_info");
     sv_privateClients = Cvar_FindVar("sv_privateClients");
     sv_privatePassword = Cvar_FindVar("sv_privatePassword");
     sv_reconnectlimit = Cvar_FindVar("sv_reconnectlimit");
@@ -232,16 +233,6 @@ const char* hook_AuthorizeState(int arg)
     if(sv_cracked->integer && !strcmp(s, "deny"))
         return "accept";
     return s;
-}
-
-const char *getPatchFromProtocol(int protocol)
-{
-    switch (protocol)
-    {
-        case 1: return "1.1";
-        case 6: return "1.5";
-        default: return "unknown";
-    }
 }
 
 void custom_SV_DirectConnect(netadr_t from)
@@ -1456,6 +1447,112 @@ void custom_PM_UpdateAimDownSightLerp()
     }
 }
 
+
+
+
+
+
+
+
+
+void custom_SV_ConnectionlessPacket(netadr_t from, msg_t *msg)
+{
+    char *s;
+    const char *c;
+    client_t *cl;
+    int i;
+    int clientNum;
+
+    clientNum = -1;
+    MSG_BeginReading(msg);
+    MSG_ReadLong(msg);
+    SV_Netchan_AddOOBProfilePacket(msg->cursize);
+
+    if (!I_strnicmp((const char *)msg->data + 4, "pb_", 3))
+    {
+        cl = svs.clients;
+        for (i = 0; i < sv_maxclients->integer; i++, cl++)
+        {
+            if (cl->state != CS_FREE && NET_CompareBaseAdr(from, (cl->netchan).remoteAddress) && (cl->netchan).remoteAddress.port == from.port)
+            {
+                clientNum = i;
+                break;
+            }
+        }
+        if (msg->data[7] != 67 && msg->data[7] != 49 && msg->data[7] != 74)
+        {
+            PbSvAddEvent(13, clientNum, msg->cursize - 4, msg->data + 4);
+        }
+    }
+    else
+    {
+        printf("##### (const char *)msg->data + 4 = %s\n", (const char *)msg->data + 4);
+
+        if(!I_strncmp("connect", (const char *)msg->data + 4, 7))
+            Huff_Decompress(msg, 12);
+        s = MSG_ReadStringLine(msg);
+        Cmd_TokenizeString(s);
+        c = Cmd_Argv(0);
+        printf("##### c %s\n", c);
+
+        if(sv_packet_info->integer)
+            Com_Printf("SV packet %s : %s\n", NET_AdrToString(from), c);
+
+        if (!I_stricmp(c, "getstatus"))
+        {
+            SVC_Status(from);
+        }
+        else if (!I_stricmp(c, "getinfo"))
+        {
+            SVC_Info(from);
+        }
+        else if (!I_stricmp(c, "getchallenge"))
+        {
+            SV_GetChallenge(from);
+        }
+        else if (!I_stricmp(c, "connect") || !I_stricmp(c, "proxyconnect"))
+        {
+            if (!NET_IsLocalAddress(from))
+            {
+                PbPassConnectString(NET_AdrToString(from), msg->data);
+            }
+            else
+            {
+                PbPassConnectString("localhost", msg->data);
+            }
+            SV_DirectConnect(from);
+        }
+        else if (!I_stricmp(c, "ipAuthorize"))
+        {
+            SV_AuthorizeIpPacket(from);
+        }
+        else if (!I_stricmp(c, "rcon"))
+        {
+            SVC_RemoteCommand(from, msg);
+        }
+        else if (!I_stricmp(c, "disconnect"))
+        {
+            
+        }
+        else
+        {
+            Com_DPrintf("bad connectionless packet from %s:\n%s\n", NET_AdrToString(from), s);
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 void custom_Sys_Quit(void)
 {
     SV_ShutdownProxies();
@@ -1664,6 +1761,11 @@ class libcod
         hook_jmp(0x08081dd3, (int)custom_MSG_WriteDeltaPlayerstate);
         hook_jmp(0x08082640, (int)custom_MSG_ReadDeltaPlayerstate);
 #endif
+
+
+        hook_jmp(0x0809336a, (int)custom_SV_ConnectionlessPacket);
+
+
         
         hook_Sys_LoadDll = new cHook(0x080d3cdd, (int)custom_Sys_LoadDll);
         hook_Sys_LoadDll->hook();

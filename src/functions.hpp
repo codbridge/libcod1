@@ -10,9 +10,6 @@ static const SL_ConvertToString_t SL_ConvertToString = (SL_ConvertToString_t)0x0
 typedef void (*ClientCommand_t)(int clientNum);
 extern ClientCommand_t ClientCommand;
 
-typedef const char * (*PBAuthClient_t)(const char *clientAddress, int cl_punkbuster, const char *PBGuid);
-static const PBAuthClient_t PBAuthClient = (PBAuthClient_t)0x080c191c;
-
 typedef void (*Netchan_Setup_t)(netsrc_t src, netchan_t *chan, netadr_t adr, unsigned int qport);
 static const Netchan_Setup_t Netchan_Setup = (Netchan_Setup_t)0x0808346f;
 
@@ -35,6 +32,9 @@ static const BigShort_t BigShort = (BigShort_t)0x080859b2;
 
 typedef void (*SockadrToNetadr_t)(struct sockaddr_in *s, netadr_t *a);
 static const SockadrToNetadr_t SockadrToNetadr = (SockadrToNetadr_t)0x080d4a89;
+
+typedef void (*Huff_Decompress_t)(msg_t *mbuf, int offset);
+static const Huff_Decompress_t Huff_Decompress = (Huff_Decompress_t)0x08076C31;
 ////
 
 //// BG
@@ -60,6 +60,9 @@ typedef int (*Cmd_Argc_t)();
 static const Cmd_Argc_t Cmd_Argc = (Cmd_Argc_t)0x080600ea;
 
 typedef int (*Cmd_FollowCycle_f_t)(gentity_s *ent, int dir);
+
+typedef void (*Cmd_TokenizeString_t)(const char *text_in);
+static const Cmd_TokenizeString_t Cmd_TokenizeString = (Cmd_TokenizeString_t)0x08060423;
 ////
 
 //// Com
@@ -98,6 +101,12 @@ static const I_strncpyz_t I_strncpyz = (I_strncpyz_t)0x08085e32;
 
 typedef int (*I_stricmp_t)(const char *s1, const char *s2);
 static const I_stricmp_t I_stricmp = (I_stricmp_t)0x08085f72;
+
+typedef int (*I_strnicmp_t)(const char *s1, const char *s2, int n);
+static const I_strnicmp_t I_strnicmp = (I_strnicmp_t)0x08085E5E;
+
+typedef int (*I_strncmp_t)(const char *s1, const char *s2, int n);
+static const I_strncmp_t I_strncmp = (I_strncmp_t)0x08085F03;
 ////
 
 //// Info
@@ -168,6 +177,12 @@ static const MSG_ReadDeltaField_t MSG_ReadDeltaField = (MSG_ReadDeltaField_t)0x0
 
 typedef void (*MSG_WriteDeltaField_t)(msg_t *msg, const byte *from, const byte *to, const netField_t *field);
 static const MSG_WriteDeltaField_t MSG_WriteDeltaField = (MSG_WriteDeltaField_t)0x0808102D;
+
+typedef void (*MSG_BeginReading_t)(msg_t *buf);
+static const MSG_BeginReading_t MSG_BeginReading = (MSG_BeginReading_t)0x0807F96B;
+
+typedef char * (*MSG_ReadStringLine_t)(msg_t *msg);
+static const MSG_ReadStringLine_t MSG_ReadStringLine = (MSG_ReadStringLine_t)0x08080212;
 ////
 
 //// NET
@@ -191,6 +206,17 @@ static const NetadrToSockadr_t NetadrToSockadr = (NetadrToSockadr_t)0x080d4a0c;
 
 typedef qboolean (*NET_StringToAdr_t)(const char *s, netadr_t *a);
 static const NET_StringToAdr_t NET_StringToAdr = (NET_StringToAdr_t)0x080844e0;
+////
+
+//// PB
+typedef const char * (*PBAuthClient_t)(const char *clientAddress, int cl_punkbuster, const char *PBGuid);
+static const PBAuthClient_t PBAuthClient = (PBAuthClient_t)0x080c191c;
+
+typedef void (*PbSvAddEvent_t)(int event, int clientNum, int offset, byte *msg);
+static const PbSvAddEvent_t PbSvAddEvent = (PbSvAddEvent_t)0x080C174C;
+
+typedef void (*PbPassConnectString_t)(const char *addr, byte *data);
+static const PbPassConnectString_t PbPassConnectString = (PbPassConnectString_t)0x080C18EC;
 ////
 
 //// PM
@@ -318,6 +344,29 @@ static const SV_SendMessageToClient_t SV_SendMessageToClient = (SV_SendMessageTo
 
 typedef void (*SV_Netchan_TransmitNextFragment_t)(netchan_t *chan);
 static const SV_Netchan_TransmitNextFragment_t SV_Netchan_TransmitNextFragment = (SV_Netchan_TransmitNextFragment_t)0x080948d0;
+
+typedef void (*SV_Netchan_AddOOBProfilePacket_t)(int iLength);
+static const SV_Netchan_AddOOBProfilePacket_t SV_Netchan_AddOOBProfilePacket = (SV_Netchan_AddOOBProfilePacket_t)0x08094928;
+
+typedef void (*SV_GetChallenge_t)(netadr_t from);
+static const SV_GetChallenge_t SV_GetChallenge = (SV_GetChallenge_t)0x080889D0;
+
+typedef void (*SV_DirectConnect_t)(netadr_t from);
+static const SV_DirectConnect_t SV_DirectConnect = (SV_DirectConnect_t)0x08089E7E;
+
+typedef void (*SV_AuthorizeIpPacket_t)(netadr_t from);
+static const SV_AuthorizeIpPacket_t SV_AuthorizeIpPacket = (SV_AuthorizeIpPacket_t)0x080893C1;
+////
+
+//// SVC
+typedef void (*SVC_Status_t)(netadr_t from);
+static const SVC_Status_t SVC_Status = (SVC_Status_t)0x0809246E;
+
+typedef void (*SVC_Info_t)(netadr_t from);
+static const SVC_Info_t SVC_Info = (SVC_Info_t)0x08092A74;
+
+typedef void (*SVC_RemoteCommand_t)(netadr_t from, msg_t *msg);
+static const SVC_RemoteCommand_t SVC_RemoteCommand = (SVC_RemoteCommand_t)0x080930D0;
 ////
 
 //// Sys

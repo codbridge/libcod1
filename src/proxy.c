@@ -181,8 +181,16 @@ void ReplaceProtocolString(char *buffer, proxy_t *proxy)
     const char *proxyProtocolString = VaProxies("\\protocol\\%d", proxy->version);
     const char *parentProtocolString = VaProxies("\\protocol\\%d", proxy->parentVersion);
     char *offset = strstr(buffer, parentProtocolString);
-    if(offset != NULL)
-        memcpy(offset, proxyProtocolString, 12);
+    if (offset != NULL)
+    {
+        size_t parentLen = strlen(parentProtocolString);
+        size_t proxyLen = strlen(proxyProtocolString);
+        if(proxyLen > parentLen)
+            memmove(offset + proxyLen, offset + parentLen, strlen(offset + parentLen) + 1);
+        else if(proxyLen < parentLen)
+            memmove(offset + proxyLen, offset + parentLen, strlen(offset + parentLen) + 1);
+        memcpy(offset, proxyProtocolString, proxyLen);
+    }
 }
 
 void ReplaceShortversionString(char *buffer, proxy_t *proxy)
@@ -190,8 +198,16 @@ void ReplaceShortversionString(char *buffer, proxy_t *proxy)
     const char *proxyShortversionString = VaProxies("\\shortversion\\%s", proxy->versionString);
     const char *parentShortversionString = VaProxies("\\shortversion\\%s", proxy->parentVersionString);
     char *offset = strstr(buffer, parentShortversionString);
-    if(offset != NULL)
-        memcpy(offset, proxyShortversionString, 16);
+    if (offset != NULL)
+    {
+        size_t parentLen = strlen(parentShortversionString);
+        size_t proxyLen = strlen(proxyShortversionString);
+        if(proxyLen > parentLen)
+            memmove(offset + proxyLen, offset + parentLen, strlen(offset + parentLen) + 1);
+        else if(proxyLen < parentLen)
+            memmove(offset + proxyLen, offset + parentLen, strlen(offset + parentLen) + 1);
+        memcpy(offset, proxyShortversionString, proxyLen);
+    }
 }
 
 bool Sys_IsProxyAddress(netadr_t from)
@@ -406,6 +422,7 @@ void * SV_StartProxy(void *threadArgs)
                 continue;*/
 
             // Prevent IP spoofing via userinfo IP client cvar
+            #if 0
             if (strlen(InfoValueForKey(lowerCaseBuffer + 11, "ip", proxy)) || strlen(InfoValueForKey(lowerCaseBuffer + 11, "port", proxy)))
             {
                 Com_Printf("Proxy: Potential IP spoofing attempt from %s\n", inet_ntoa(addr.sin_addr));
@@ -424,6 +441,7 @@ void * SV_StartProxy(void *threadArgs)
                 sendto(listenerSocket, DISCONNECT_MESSAGE, sizeof(DISCONNECT_MESSAGE), 0, (struct sockaddr *)&addr, sizeof(addr));
                 continue;
             }
+            #endif
 
             // Prepare insertion of public client address into userinfo string
             // so that the getIP() script function can return that IP although
@@ -447,6 +465,7 @@ void * SV_StartProxy(void *threadArgs)
             size_t insert_position = current_len - 1;
             snprintf(buffer + insert_position, added_len + 2, "%s%s%s%s\"", ip_insertion, client_ip, port_insertion, client_port);
             buffer[insert_position + added_len + 2] = '\0';
+            printf("##### PASS, buffer: %s\n", buffer);
             bytes_received = bytes_received + added_len;
         }
         else if (memcmp(lowerCaseBuffer, "\xFF\xFF\xFF\xFFgetchallenge", 16) == 0)
@@ -480,7 +499,6 @@ void * SV_StartProxy(void *threadArgs)
             {
                 // New client connection to handle
                 int s_client = socket(AF_INET, SOCK_DGRAM, 0);
-
                 if (s_client == -1)
                 {
                     Com_DPrintf("Proxy: Socket error at port %d\n", BigShort(proxy->listenAdr.port));
@@ -501,6 +519,7 @@ void * SV_StartProxy(void *threadArgs)
                 if(activeClient && com_sv_running->integer)
                     Com_DPrintf("Proxy: Client connecting from %s:%d\n", client_ip, ntohs(addr.sin_port));
 
+                printf("##### sendto, buffer: %s\n", buffer);
                 sendto(s_client, buffer, bytes_received, 0, (struct sockaddr *)&forwarderAddr, sizeof(forwarderAddr));
 
                 proxyClientThreadArgs *args = (proxyClientThreadArgs *)malloc(sizeof(proxyClientThreadArgs));
@@ -524,6 +543,18 @@ void * SV_StartProxy(void *threadArgs)
             }
             else
             {
+                printf("##### buffer: %s\n", buffer);
+
+                if (memcmp(buffer, "\xFF\xFF\xFF\xFF""connect", 11) == 0)
+                {
+                    const char *old_substr = "connect";
+                    const char *new_substr = "proxyconnect";
+                    char *pos = strstr(buffer, old_substr);
+                    memmove(pos + strlen(new_substr), pos + strlen(old_substr), strlen(pos + strlen(old_substr)) + 1);
+                    strncpy(pos, new_substr, strlen(new_substr));
+                    printf("##### buffer updated: %s\n", buffer);
+                }
+
                 // Forward packets of known client to server
                 sendto(clientThreadInfo[clientIndex].s_client, buffer, bytes_received, 0, (struct sockaddr *)&forwarderAddr, sizeof(forwarderAddr));
             }
@@ -646,6 +677,8 @@ void * SV_ProxyClientThread(void *threadArgs)
                 buffer[bytes_received] = '\0';
             }
         }
+
+        printf("##### Forward server->client: buffer: %s\n", buffer);
 
         // Forward packets to the client
         ssize_t sent_bytes = sendto(args->proxy->socket, buffer, bytes_received, 0, (struct sockaddr *)&args->addr, sizeof(args->addr));
