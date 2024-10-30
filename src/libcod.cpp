@@ -31,6 +31,7 @@ cvar_t *sv_cracked;
 cvar_t *sv_logHeartbeats;
 cvar_t *sv_masterPort;
 cvar_t *sv_masterServer;
+cvar_t *sv_multiVersion;
 ////
 
 //// Game lib
@@ -200,6 +201,7 @@ void custom_Com_Init(char *commandLine)
     sv_logHeartbeats = Cvar_Get("sv_logHeartbeats", "1", CVAR_ARCHIVE);
     sv_masterPort = Cvar_Get("sv_masterPort", "20510", CVAR_ARCHIVE);
     sv_masterServer = Cvar_Get("sv_masterServer", "codmaster.activision.com", CVAR_ARCHIVE);
+    sv_multiVersion = Cvar_Get("sv_multiVersion", "0", CVAR_ARCHIVE);
 }
 
 void custom_GScr_LoadGameTypeScript()
@@ -256,13 +258,25 @@ void custom_SV_DirectConnect(netadr_t from)
     Com_DPrintf("SV_DirectConnect()\n");
     
     I_strncpyz(userinfo, Cmd_Argv(1), sizeof(userinfo));
+
     version = atoi(Info_ValueForKey(userinfo, "protocol"));
-    
-    if (version != 6 && version != 1)
+    if (version != 6)
     {
-        NET_OutOfBandPrint(NS_SERVER, from, va("error\nEXE_SERVER_IS_DIFFERENT_VER\x15%s\n", "1.5"));
-        Com_DPrintf("    rejected connect from protocol version %i (should be %i or %i)\n", version, 6, 1);
-        return;
+        if (sv_multiVersion->integer)
+        {
+            if (version != 1)
+            {
+                NET_OutOfBandPrint(NS_SERVER, from, va("error\nEXE_SERVER_IS_DIFFERENT_VER\x15%s\n", "1.5"));
+                Com_DPrintf("    rejected connect from protocol version %i (should be %i or %i)\n", version, 6, 1);
+                return;
+            }
+        }
+        else
+        {
+            NET_OutOfBandPrint(NS_SERVER, from, va("error\nEXE_SERVER_IS_DIFFERENT_VER\x15%s\n", "1.5"));
+            Com_DPrintf("    rejected connect from protocol version %i (should be %i)\n", version, 6);
+            return;
+        }
     }
     
     challenge = atoi(Info_ValueForKey(userinfo, "challenge"));
@@ -524,8 +538,8 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
     
     int clientProtocol_to = customPlayerState[to->clientNum].protocol;
     int clientProtocol_from = 0;
-    /*client_t *cl_to = &svs.clients[to->clientNum];
-    client_t *cl_from;*/
+    client_t *cl_to = &svs.clients[to->clientNum];
+    client_t *cl_from;
     
     if (!from)
     {
@@ -535,7 +549,7 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
     else
     {
         clientProtocol_from = customPlayerState[from->clientNum].protocol;
-        //cl_from = &svs.clients[from->clientNum];
+        cl_from = &svs.clients[from->clientNum];
     }
 
     lc = 0;
@@ -586,11 +600,11 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
                 numBits = abs(field->bits);
                 bitmask = unsignedbits;
 
-                /*if (!strcmp(field->name, "pm_flags"))
+                if (!strcmp(field->name, "pm_flags"))
                 {
                     printf("<WRITE> fromF: %X\n", *fromF);
                     printf("<WRITE> toF: %X\n", *toF);
-                }*/
+                }
 
                 if (!strcmp(field->name, "pm_flags"))
                 {
@@ -663,14 +677,14 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
                     }
                 }
 
-                /*if (!strcmp(field->name, "pm_flags"))
+                if (!strcmp(field->name, "pm_flags"))
                 {
                     printf("<WRITE> [TO] pm_flags: %X | name: %s | protocol: %i\n", bitmask, cl_to->name, clientProtocol_to);
                     if (clientProtocol_from)
                     {
                         printf("...   [FROM] pm_flags: %X | name: %s | protocol: %i\n", *fromF, cl_from->name, clientProtocol_from);
                     }
-                }*/
+                }
                 
                 abs3bits = numBits & 7;
                 if (abs3bits)
@@ -832,8 +846,8 @@ void custom_MSG_ReadDeltaPlayerstate(msg_t *msg, playerState_t *from, playerStat
 
     int clientProtocol_to = customPlayerState[to->clientNum].protocol;
     int clientProtocol_from = 0;
-    /*client_t *cl_to = &svs.clients[to->clientNum];
-    client_t *cl_from;*/
+    client_t *cl_to = &svs.clients[to->clientNum];
+    client_t *cl_from;
 
     if (!from)
     {
@@ -843,7 +857,7 @@ void custom_MSG_ReadDeltaPlayerstate(msg_t *msg, playerState_t *from, playerStat
     else
     {
         clientProtocol_from = customPlayerState[from->clientNum].protocol;
-        //cl_from = &svs.clients[from->clientNum];
+        cl_from = &svs.clients[from->clientNum];
     }
     memcpy(to, from, sizeof(playerState_t));
     
@@ -877,11 +891,11 @@ void custom_MSG_ReadDeltaPlayerstate(msg_t *msg, playerState_t *from, playerStat
             unsignedbits = (unsigned int)field->bits >> 31;
             readbits = abs(field->bits);
 
-            /*if (!strcmp(field->name, "pm_flags"))
+            if (!strcmp(field->name, "pm_flags"))
             {
                 printf(">READ< fromF: %X\n", *fromF);
                 printf(">READ< toF: %X\n", *toF);
-            }*/
+            }
             
             if (!strcmp(field->name, "pm_flags"))
             {
@@ -919,14 +933,14 @@ void custom_MSG_ReadDeltaPlayerstate(msg_t *msg, playerState_t *from, playerStat
             if(unsignedbits && ((readbyte >> (readbits - 1)) & 1) != 0)
                 readbyte |= ~((1 << readbits) - 1);
 
-            /*if (!strcmp(field->name, "pm_flags"))
+            if (!strcmp(field->name, "pm_flags"))
             {
                 printf(">READ<  [TO] pm_flags: %X | name: %s | protocol: %i\n", readbyte, cl_to->name, clientProtocol_to);
                 if (clientProtocol_from)
                 {
                     printf("...   [FROM] pm_flags: %X | name: %s | protocol: %i\n", *fromF, cl_from->name, clientProtocol_from);
                 }
-            }*/
+            }
 
             *toF = readbyte;
         }
