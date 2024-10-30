@@ -506,7 +506,6 @@ void custom_SV_SendClientGameState(client_t *client)
         SV_Netchan_TransmitNextFragment(&client->netchan);
 }
 
-#if 1
 void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerState_t *to)
 {
     int i, j, lc;
@@ -1009,7 +1008,6 @@ void custom_MSG_ReadDeltaPlayerstate(msg_t *msg, playerState_t *from, playerStat
         MSG_ReadDeltaHudElems(msg, from->hud.current, to->hud.current, MAX_HUDELEMS_CURRENT);
     }
 }
-#endif
 
 void hook_ClientCommand(int clientNum)
 {
@@ -1447,121 +1445,6 @@ void custom_PM_UpdateAimDownSightLerp()
     }
 }
 
-
-
-
-
-
-
-
-
-void custom_SV_ConnectionlessPacket(netadr_t from, msg_t *msg)
-{
-    char *s;
-    const char *c;
-    client_t *cl;
-    int i;
-    int clientNum;
-
-    clientNum = -1;
-    MSG_BeginReading(msg);
-    MSG_ReadLong(msg);
-    SV_Netchan_AddOOBProfilePacket(msg->cursize);
-
-    if (!I_strnicmp((const char *)msg->data + 4, "pb_", 3))
-    {
-        cl = svs.clients;
-        for (i = 0; i < sv_maxclients->integer; i++, cl++)
-        {
-            if (cl->state != CS_FREE && NET_CompareBaseAdr(from, (cl->netchan).remoteAddress) && (cl->netchan).remoteAddress.port == from.port)
-            {
-                clientNum = i;
-                break;
-            }
-        }
-        if (msg->data[7] != 67 && msg->data[7] != 49 && msg->data[7] != 74)
-        {
-            PbSvAddEvent(13, clientNum, msg->cursize - 4, msg->data + 4);
-        }
-    }
-    else
-    {
-        printf("##### (const char *)msg->data + 4 = %s\n", (const char *)msg->data + 4);
-
-        if(!I_strncmp("connect", (const char *)msg->data + 4, 7))
-            Huff_Decompress(msg, 12);
-        s = MSG_ReadStringLine(msg);
-        Cmd_TokenizeString(s);
-        c = Cmd_Argv(0);
-
-        if(sv_packet_info->integer)
-            Com_Printf("SV packet %s : %s\n", NET_AdrToString(from), c);
-
-        if (!I_stricmp(c, "getstatus"))
-        {
-            SVC_Status(from);
-        }
-        else if (!I_stricmp(c, "getinfo"))
-        {
-            SVC_Info(from);
-        }
-        else if (!I_stricmp(c, "getchallenge"))
-        {
-            SV_GetChallenge(from);
-        }
-        else if (!I_stricmp(c, "connect") || !I_stricmp(c, "proxyconnect"))
-        {
-            if (!NET_IsLocalAddress(from))
-            {
-                PbPassConnectString(NET_AdrToString(from), msg->data);
-            }
-            else
-            {
-                PbPassConnectString("localhost", msg->data);
-            }
-            SV_DirectConnect(from);
-        }
-        else if (!I_stricmp(c, "ipAuthorize"))
-        {
-            SV_AuthorizeIpPacket(from);
-        }
-        else if (!I_stricmp(c, "rcon"))
-        {
-            SVC_RemoteCommand(from, msg);
-        }
-        else if (!I_stricmp(c, "disconnect"))
-        {
-            
-        }
-        else
-        {
-            Com_DPrintf("bad connectionless packet from %s:\n%s\n", NET_AdrToString(from), s);
-        }
-    }
-}
-
-
-
-cHook *hook_ClientConnect;
-const char * custom_ClientConnect(unsigned int clientNum, unsigned int scriptPersId)
-{
-    printf("##### custom_ClientConnect\n");
-
-    hook_ClientConnect->unhook();
-    const char * (*ClientConnect)(unsigned int clientNum, unsigned int scriptPersId);
-    *(int*)&ClientConnect = hook_ClientConnect->from;
-    const char * ret = ClientConnect(clientNum, scriptPersId);
-    hook_ClientConnect->hook();
-
-    return ret;
-}
-
-
-
-
-
-
-
 void custom_Sys_Quit(void)
 {
     SV_ShutdownProxies();
@@ -1721,18 +1604,14 @@ void *custom_Sys_LoadDll(const char *name, char *fqpath, int (**entryPoint)(int,
 
     hook_call((int)dlsym(libHandle, "vmMain") + 0xF0, (int)hook_ClientCommand);
 
-    hook_jmp((int)dlsym(libHandle, "_init") + 0xBBF1, (int)custom_PM_GetReducedFriction);
     hook_jmp((int)dlsym(libHandle, "_init") + 0xBC52, (int)custom_PM_GetLandFactor);
-    hook_jmp((int)dlsym(libHandle, "_init") + 0xD23D, (int)custom_PM_WalkMove);
-    hook_jmp((int)dlsym(libHandle, "PM_UpdateLean"), (int)custom_PM_UpdateLean);
+    hook_jmp((int)dlsym(libHandle, "_init") + 0xBBF1, (int)custom_PM_GetReducedFriction);
     hook_jmp((int)dlsym(libHandle, "PM_UpdateAimDownSightLerp"), (int)custom_PM_UpdateAimDownSightLerp);
-
+    hook_jmp((int)dlsym(libHandle, "PM_UpdateLean"), (int)custom_PM_UpdateLean);
+    hook_jmp((int)dlsym(libHandle, "_init") + 0xD23D, (int)custom_PM_WalkMove);
+    
     hook_GScr_LoadGameTypeScript = new cHook((int)dlsym(libHandle, "GScr_LoadGameTypeScript"), (int)custom_GScr_LoadGameTypeScript);
     hook_GScr_LoadGameTypeScript->hook();
-
-
-    hook_ClientConnect = new cHook((int)dlsym(libHandle, "ClientConnect"), (int)custom_ClientConnect);
-    hook_ClientConnect->hook();
 
     return libHandle;
 }
@@ -1770,26 +1649,19 @@ class libcod
 
         hook_jmp(0x08089e7e, (int)custom_SV_DirectConnect);
         hook_jmp(0x0808ae44, (int)custom_SV_SendClientGameState);
-#if 1
-        hook_jmp(0x08081dd3, (int)custom_MSG_WriteDeltaPlayerstate);
         hook_jmp(0x08082640, (int)custom_MSG_ReadDeltaPlayerstate);
-#endif
+        hook_jmp(0x08081dd3, (int)custom_MSG_WriteDeltaPlayerstate);
 
-
-        hook_jmp(0x0809336a, (int)custom_SV_ConnectionlessPacket);
-
-
-        
-        hook_Sys_LoadDll = new cHook(0x080d3cdd, (int)custom_Sys_LoadDll);
-        hook_Sys_LoadDll->hook();
         hook_Com_Init = new cHook(0x08070ef8, (int)custom_Com_Init);
         hook_Com_Init->hook();
         hook_SV_BotUserMove = new cHook(0x080940d2, (int)custom_SV_BotUserMove);
         hook_SV_BotUserMove->hook();
-        hook_SV_SpawnServer = new cHook(0x08090d0f, (int)custom_SV_SpawnServer);
-        hook_SV_SpawnServer->hook();
         hook_Sys_Quit = new cHook(0x080d3354, int(custom_Sys_Quit));
         hook_Sys_Quit->hook();
+        hook_SV_SpawnServer = new cHook(0x08090d0f, (int)custom_SV_SpawnServer);
+        hook_SV_SpawnServer->hook();
+        hook_Sys_LoadDll = new cHook(0x080d3cdd, (int)custom_Sys_LoadDll);
+        hook_Sys_LoadDll->hook();
         
         printf("Loading complete\n");
         printf("-----------------------------------\n");

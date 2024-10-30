@@ -1,5 +1,6 @@
-/* (source licenses)
-https://github.com/filthyfreak/CoD2_Proxy_Server/blob/main/LICENSE & https://github.com/ibuddieat/zk_libcod/blob/dev/code/proxy/LICENSE.md
+/*  Source licenses
+    - https://github.com/filthyfreak/CoD2_Proxy_Server/blob/main/LICENSE
+    - https://github.com/ibuddieat/zk_libcod/blob/dev/code/proxy/LICENSE.md
 */
 
 #include "shared.hpp"
@@ -21,6 +22,7 @@ char HEARTBEAT_STOP_MESSAGE[] = "\xFF\xFF\xFF\xFFheartbeat flatline";
 char AUTHORIZE_MESSAGE[] = "\xFF\xFF\xFF\xFFgetIpAuthorize";
 char DISCONNECT_MESSAGE[] = "\xFF\xFF\xFF\xFF""error\nEXE_DISCONNECTED_FROM_SERVER";
 
+cvar_t *sv_proxyEnable;
 cvar_t *sv_proxiesVisibleForTrackers;
 cvar_t *sv_proxyAddress;
 cvar_t *sv_proxyForwardAddress;
@@ -304,13 +306,15 @@ void SV_SetupProxies()
 
     const char *forwardAddress = va("%s:%d", net_ip->string, net_port->integer);
 
+	sv_proxyEnable = Cvar_Get("sv_proxyEnable", "0", CVAR_ARCHIVE);
     sv_proxiesVisibleForTrackers = Cvar_Get("sv_proxiesVisibleForTrackers", "0", CVAR_ARCHIVE);
     sv_proxyAddress = Cvar_Get("sv_proxyAddress", "0.0.0.0:28960", CVAR_ARCHIVE);
     sv_proxyForwardAddress = Cvar_Get("sv_proxyForwardAddress", forwardAddress, CVAR_ARCHIVE);
 
     SV_ResetProxiesInformation();
 
-    SV_ConfigureProxy(&proxies[0], getShortVersionFromProtocol(1), sv_proxyAddress->string, sv_proxyForwardAddress->string, 6);
+    if(sv_proxyEnable->integer)
+        SV_ConfigureProxy(&proxies[0], getShortVersionFromProtocol(1), sv_proxyAddress->string, sv_proxyForwardAddress->string, 6);
 
     int i;
     proxy_t *proxy;
@@ -421,64 +425,41 @@ void * SV_StartProxy(void *threadArgs)
             /*if (SVC_ApplyConnectLimit(adr, proxy->bucket))
                 continue;*/
 
-            // Prevent IP spoofing via userinfo IP client cvar
-            #if 0
+            /*// Prevent IP spoofing via userinfo IP client cvar
             if (strlen(InfoValueForKey(lowerCaseBuffer + 11, "ip", proxy)) || strlen(InfoValueForKey(lowerCaseBuffer + 11, "port", proxy)))
             {
                 Com_Printf("Proxy: Potential IP spoofing attempt from %s\n", inet_ntoa(addr.sin_addr));
 
                 // Prevent excess outbound bandwidth usage when being flooded inbound
-                /*if (SVC_RateLimit(&outboundLeakyBuckets[proxy->bucket], 10, 100))
+                if (SVC_RateLimit(&outboundLeakyBuckets[proxy->bucket], 10, 100))
                 {
                     // In theory, clients stay in the "Awaiting challenge..."
                     // screen, but the disconnect messages that make it through
                     // every now and then will still cause a normal disconnect
                     Com_DPrintf("Proxy: IP spoofing disconnect rate limit exceeded, dropping response\n");
                     continue;
-                }*/
+                }
 
                 // Cause disconnect on the client side
                 sendto(listenerSocket, DISCONNECT_MESSAGE, sizeof(DISCONNECT_MESSAGE), 0, (struct sockaddr *)&addr, sizeof(addr));
                 continue;
-            }
-            #endif
+            }*/
             
-            msg_t mbuf;
-            byte buf[1400];
-            MSG_InitOOB(&mbuf, buf, sizeof(buf));
-            MSG_WriteData(&mbuf, buffer, bytes_received);
-            Huff_Decompress(&mbuf, 12);
-            memcpy(buffer, mbuf.data, MAX_BUFFER_SIZE);
+            /*msg_t message;
+            byte message_buffer[MAX_BUFFER_SIZE];
+            MSG_InitOOB(&message, message_buffer, sizeof(message_buffer));
+            MSG_WriteData(&message, buffer, bytes_received);
+            Huff_Decompress(&message, 12);
+            memcpy(buffer, message_buffer.data, sizeof(buffer));*/
 
-            const char old_substr[] = "connect";
-            const char new_substr[] = "proxyconnect";
-            char *pos = strstr(buffer, old_substr);
-            memmove(pos + strlen(new_substr), pos + strlen(old_substr), strlen(pos + strlen(old_substr)) + 1);
-            strncpy(pos, new_substr, strlen(new_substr));
-            
-            // Prepare insertion of public client address into userinfo string
-            // so that the getIP() script function can return that IP although
-            // the server only sees the proxy as peer, and status requests will
-            // yield the external IP:Port combinations
-            char ip_insertion[] = "\\ip\\";
-            char port_insertion[] = "\\port\\";
-            char client_port[6];
-            snprintf(client_port, sizeof(client_port), "%d", ntohs(addr.sin_port));
             size_t current_len = strlen(buffer);
-            size_t added_len = strlen(ip_insertion) + strlen(client_ip) + strlen(port_insertion) + strlen(client_port) + (strlen(new_substr) - strlen(old_substr));
 
             // Buffer size validation
-            if (current_len + added_len + 1 >= sizeof(buffer))
+            if (current_len /*+ added_len */+ 1 >= sizeof(buffer))
             {
                 Com_Printf("Proxy: Not enough space in userinfo string for address from client %s\n", inet_ntoa(addr.sin_addr));
                 continue;
             }
-
-            // Insert data, starting at the closing quote
-            size_t insert_position = current_len - 1;
-            snprintf(buffer + insert_position, added_len + 2, "%s%s%s%s\"", ip_insertion, client_ip, port_insertion, client_port);
-            buffer[insert_position + added_len + 2] = '\0';
-            bytes_received = bytes_received + added_len;
         }
         else if (memcmp(lowerCaseBuffer, "\xFF\xFF\xFF\xFFgetchallenge", 16) == 0)
         {

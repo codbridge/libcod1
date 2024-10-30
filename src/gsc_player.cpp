@@ -228,3 +228,17 @@ void gsc_player_renameclient(scr_entref_t ref)
 
     stackPushBool(qtrue);
 }
+
+void gsc_player_getprotocol(scr_entref_t ref)
+{
+	int id = ref.entnum;
+
+	if (id >= MAX_CLIENTS)
+	{
+		stackError("gsc_player_getprotocol() entity %i is not a player", id);
+		stackPushUndefined();
+		return;
+	}
+
+	stackPushInt(customPlayerState[id].protocol);
+}

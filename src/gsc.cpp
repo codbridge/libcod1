@@ -39,12 +39,11 @@ scr_method_t scriptMethods[] =
     {"leanleftButtonPressed", gsc_player_button_leanleft, 0},
     {"leanRightButtonPressed", gsc_player_button_leanright, 0},
     {"reloadButtonPressed", gsc_player_button_reload, 0},
-
     {"getPlayerAngles", gsc_player_getangles, 0},
     {"getStance", gsc_player_getstance, 0},
-
     {"processClientCommand", gsc_player_processclientcommand, 0},
     {"renameClient", gsc_player_renameclient, 0},
+    {"getProtocol", gsc_player_getprotocol, 0},
 
     //// Bot
     {"setUse", gsc_bots_setuse, 0},

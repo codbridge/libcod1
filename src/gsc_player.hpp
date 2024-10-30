@@ -11,3 +11,4 @@ void gsc_player_getangles(scr_entref_t ref);
 void gsc_player_getstance(scr_entref_t ref);
 void gsc_player_processclientcommand(scr_entref_t ref);
 void gsc_player_renameclient(scr_entref_t ref);
+void gsc_player_getprotocol(scr_entref_t ref);
