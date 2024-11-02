@@ -557,6 +557,13 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
     {
         fromF = (int *)((byte *)from + field->offset);
         toF = (int *)((byte *)to + field->offset);
+
+        if (!strcmp(field->name, "deltaTime") && clientProtocol_to == 1)
+        {
+            printf("<WRITE> toF before: %i\n", *toF);
+            toF = (int *)((byte *)to + field->offset + 4);
+            printf("<WRITE> toF after: %i\n", *toF);
+        }
         
         if(*fromF != *toF)
             lc = i + 1;
@@ -602,8 +609,15 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
 
                 if (!strcmp(field->name, "pm_flags"))
                 {
+                    /*printf("<WRITE> %s\n", field->name);
                     printf("<WRITE> fromF: %X\n", *fromF);
-                    printf("<WRITE> toF: %X\n", *toF);
+                    printf("<WRITE> toF: %X\n", *toF);*/
+                }
+                else if (!strcmp(field->name, "deltaTime"))
+                {
+                    /*printf("<WRITE> %s\n", field->name);
+                    printf("<WRITE> fromF: %i\n", *fromF);
+                    printf("<WRITE> toF: %i\n", *toF);*/
                 }
 
                 if (!strcmp(field->name, "pm_flags"))
@@ -683,6 +697,14 @@ void custom_MSG_WriteDeltaPlayerstate(msg_t *msg, playerState_t *from, playerSta
                     if (clientProtocol_from)
                     {
                         printf("...   [FROM] pm_flags: %X | name: %s | protocol: %i\n", *fromF, cl_from->name, clientProtocol_from);
+                    }
+                }
+                else if (!strcmp(field->name, "deltaTime"))
+                {
+                    printf("<WRITE> [TO] deltaTime: %i | name: %s | protocol: %i\n", bitmask, cl_to->name, clientProtocol_to);
+                    if (clientProtocol_from)
+                    {
+                        printf("...   [FROM] deltaTime: %i | name: %s | protocol: %i\n", *fromF, cl_from->name, clientProtocol_from);
                     }
                 }
                 
@@ -867,6 +889,13 @@ void custom_MSG_ReadDeltaPlayerstate(msg_t *msg, playerState_t *from, playerStat
         fromF = (int32_t *)((byte *)from + field->offset);
         toF = (int32_t *)((byte *)to + field->offset);
 
+        if (!strcmp(field->name, "deltaTime") && clientProtocol_from == 1)
+        {
+            printf(">READ< fromF before: %i\n", *fromF);
+            fromF = (int32_t *)((byte *)to + field->offset + 4);
+            printf(">READ< fromF after: %i\n", *fromF);
+        }
+
         if (!MSG_ReadBit(msg))
         {
             *toF = *fromF;
@@ -893,8 +922,15 @@ void custom_MSG_ReadDeltaPlayerstate(msg_t *msg, playerState_t *from, playerStat
 
             if (!strcmp(field->name, "pm_flags"))
             {
+                /*printf(">READ< %s\n", field->name);
                 printf(">READ< fromF: %X\n", *fromF);
-                printf(">READ< toF: %X\n", *toF);
+                printf(">READ< toF: %X\n", *toF);*/
+            }
+            else if (!strcmp(field->name, "deltaTime"))
+            {
+                /*printf(">READ< %s\n", field->name);
+                printf(">READ< fromF: %i\n", *fromF);
+                printf(">READ< toF: %i\n", *toF);*/
             }
             
             if (!strcmp(field->name, "pm_flags"))
@@ -939,6 +975,14 @@ void custom_MSG_ReadDeltaPlayerstate(msg_t *msg, playerState_t *from, playerStat
                 if (clientProtocol_from)
                 {
                     printf("...   [FROM] pm_flags: %X | name: %s | protocol: %i\n", *fromF, cl_from->name, clientProtocol_from);
+                }
+            }
+            else if (!strcmp(field->name, "deltaTime"))
+            {
+                printf(">READ< [TO] deltaTime: %i | name: %s | protocol: %i\n", readbyte, cl_to->name, clientProtocol_to);
+                if (clientProtocol_from)
+                {
+                    printf("...   [FROM] deltaTime: %i | name: %s | protocol: %i\n", *fromF, cl_from->name, clientProtocol_from);
                 }
             }
 
