@@ -1,10 +1,11 @@
-Linux server extension for CoD1 1.5
+This test branch is for the 1.5 Linux server.
 
-This is a minimal version of the main branch, the wiki do not fully apply
+It is an attempt to let the 1.1 client play without altering its movements.
 
-The cod1dev server extension is currently focused on the 1.1 game version  
-1 item of the todo-list is to make the 1.5 server able to let the 1.1 client play on it  
-see https://discord.com/channels/1220643040880885851/1247731807018025031  
-https://discord.gg/NgN5VQ5kfd
+In the current state, it works except for some actions such as:
+- "prone jump"
+- stance switch speed
 
-Unlike the main version, this one has no security features added
+But sometimes, during killcam, the server crashes (see the Discord server for info)
+
+This branch doesn't contain all the features of the main one for 1.1, so the wiki doesn't fully apply
